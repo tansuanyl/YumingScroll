@@ -1,16 +1,4 @@
-import type {
-  AccountHealthRecord,
-  AuthUser,
-  BillingStatus,
-  EmailVerificationResponse,
-  MediaAsset,
-  PasswordResetRequest,
-  Project,
-  ProjectSummary,
-  RechargeRequest,
-  VideoAspectRatio,
-  WorkflowEdge
-} from "../types/domain";
+import type { MediaAsset, Project, ProjectSummary, VideoAspectRatio, WorkflowEdge } from "../types/domain";
 import type { VisualStylePresetId } from "../data/visualStylePresets";
 
 const jsonHeaders = { "content-type": "application/json" };
@@ -19,6 +7,31 @@ const TEXT_GENERATION_TIMEOUT_MS = 420_000;
 const TEXT_IMPORT_TIMEOUT_MS = 900_000;
 
 export type TextModelSelection = "gpt-5.5" | "kimi-k2.6";
+export type ProviderMode = "mock" | "live" | "unconfigured";
+
+export type TextProviderStatus = {
+  provider: "openai";
+  mode: ProviderMode;
+  configured: boolean;
+  configuredModels: TextModelSelection[];
+  configurationSource: "mock" | "server-env" | "missing";
+  model: string;
+  availableModels: TextModelSelection[];
+  requestTimeoutMs: number;
+  fallbackToMockOnTimeout: boolean;
+};
+
+export type MediaProviderStatus = {
+  provider: "ark" | "fal" | "generic";
+  mode: ProviderMode;
+  configured: boolean;
+  configurationSource: "mock" | "server-env" | "missing";
+  baseUrl: string;
+  imageModel: string;
+  videoModel: string;
+  imageApi: "seedream";
+  videoApi: "seedance";
+};
 
 function resolveApiBaseUrl(): string {
   const configuredUrl = process.env.NEXT_PUBLIC_API_BASE_URL || readViteApiBaseUrl();
@@ -98,7 +111,6 @@ async function request<T>(url: string, options?: ApiRequestInit): Promise<T> {
   try {
     const response = await fetch(`${apiBaseUrl}${url}`, {
       ...fetchOptions,
-      credentials: "include",
       signal: controller?.signal
     });
     const payload = (await response.json().catch(() => ({}))) as T & { error?: string };
@@ -172,105 +184,6 @@ function isRecoverableProxyResponseError(status: number, message: string): boole
 
 export const apiClient = {
   health: () => request<{ ok: boolean }>("/api/health"),
-  me: () => request<{ user: AuthUser | null }>("/api/auth/me"),
-  login: (input: { username: string; password: string }) =>
-    request<{ user: AuthUser }>("/api/auth/login", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify(input)
-    }),
-  register: (input: { email: string; password: string; displayName?: string }) =>
-    request<{ user: AuthUser; emailVerification: EmailVerificationResponse }>("/api/auth/register", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify(input)
-    }),
-  resendEmailVerification: (input: { email: string }) =>
-    request<{ ok: boolean; emailVerification?: EmailVerificationResponse }>("/api/auth/resend-verification", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify(input)
-    }),
-  requestPasswordReset: (input: { username: string; contact?: string }) =>
-    request<{ ok: boolean }>("/api/auth/password-reset-requests", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify(input)
-    }),
-  logout: () =>
-    request<{ ok: boolean }>("/api/auth/logout", {
-      method: "POST"
-    }),
-  listUsers: () => request<AuthUser[]>("/api/admin/users"),
-  createUser: (input: {
-    username: string;
-    email?: string;
-    password: string;
-    displayName?: string;
-    role?: "admin" | "tester";
-    billingMode?: "free" | "coins";
-    initialCoins?: number;
-    note?: string;
-  }) =>
-    request<AuthUser>("/api/admin/users", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify(input)
-    }),
-  updateUser: (
-    userId: string,
-    input: {
-      password?: string;
-      displayName?: string;
-      role?: "admin" | "tester";
-      status?: "active" | "disabled";
-      billingMode?: "free" | "coins";
-      coinBalance?: number;
-      note?: string;
-    }
-  ) =>
-    request<AuthUser>(`/api/admin/users/${encodeURIComponent(userId)}`, {
-      method: "PATCH",
-      headers: jsonHeaders,
-      body: JSON.stringify(input)
-    }),
-  creditUserCoins: (userId: string, input: { coins: number; note?: string }) =>
-    request<AuthUser>(`/api/admin/users/${encodeURIComponent(userId)}/coins`, {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify(input)
-    }),
-  listAccountHealth: () => request<AccountHealthRecord[]>("/api/admin/users/account-health"),
-  resendUserEmailVerification: (userId: string) =>
-    request<{ sent: boolean; mailerConfigured: boolean; reason?: string }>(
-      `/api/admin/users/${encodeURIComponent(userId)}/resend-email-verification`,
-      { method: "POST" }
-    ),
-  markUserEmailVerified: (userId: string) =>
-    request<AuthUser>(`/api/admin/users/${encodeURIComponent(userId)}/verify-email`, {
-      method: "POST"
-    }),
-  billingMe: () => request<BillingStatus>("/api/billing/me"),
-  createRechargeRequest: (input: { paymentMethod: "wechat" | "alipay"; amountCny: number; note?: string }) =>
-    request<RechargeRequest>("/api/billing/recharge-requests", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify(input)
-    }),
-  listRechargeRequests: () => request<RechargeRequest[]>("/api/billing/admin/recharge-requests"),
-  reviewRechargeRequest: (id: string, status: "approved" | "rejected") =>
-    request<RechargeRequest>(`/api/billing/admin/recharge-requests/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      headers: jsonHeaders,
-      body: JSON.stringify({ status })
-    }),
-  listPasswordResetRequests: () => request<PasswordResetRequest[]>("/api/billing/admin/password-reset-requests"),
-  completePasswordResetRequest: (id: string, password: string) =>
-    request<PasswordResetRequest>(`/api/billing/admin/password-reset-requests/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      headers: jsonHeaders,
-      body: JSON.stringify({ password })
-    }),
   listProjects: () => request<ProjectSummary[]>("/api/projects"),
   getProject: (projectId: string) => request<Project>(`/api/projects/${projectId}`),
   createProject: (input: { title?: string; inspiration?: string }) =>
@@ -359,18 +272,9 @@ export const apiClient = {
       headers: jsonHeaders,
       body: JSON.stringify(input)
     }),
+  textProviderStatus: () => request<TextProviderStatus>("/api/text/provider-status"),
   mediaProviderStatus: () =>
-    request<{
-      provider: "ark" | "fal" | "generic";
-      mode: "mock" | "live" | "unconfigured";
-      configured: boolean;
-      configurationSource: "mock" | "server-env" | "missing";
-      baseUrl: string;
-      imageModel: string;
-      videoModel: string;
-      imageApi: "seedream";
-      videoApi: "seedance";
-    }>("/api/media/provider-status"),
+    request<MediaProviderStatus>("/api/media/provider-status"),
   generateCharacterImage: (
     projectId: string,
     characterModelId: string,

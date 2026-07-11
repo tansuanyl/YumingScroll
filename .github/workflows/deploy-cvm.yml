@@ -96,17 +96,12 @@ jobs:
           CVM_HOST: ${{ secrets.CVM_HOST }}
           CVM_USER: ${{ secrets.CVM_USER || 'ubuntu' }}
           CVM_PORT: ${{ secrets.CVM_PORT || '22' }}
-          AUTH_BOOTSTRAP_PASSWORD: ${{ secrets.AUTH_BOOTSTRAP_PASSWORD }}
           CVM_PRIMARY_DOMAIN: ${{ vars.CVM_PRIMARY_DOMAIN }}
           CVM_ALTERNATE_DOMAIN: ${{ vars.CVM_ALTERNATE_DOMAIN }}
         run: |
           set -euo pipefail
           REMOTE_RELEASE="/home/$CVM_USER/ai-comic-workbench-release-${GITHUB_RUN_ID}.tar.gz"
           REMOTE_SCRIPT="/home/$CVM_USER/deploy-cvm-remote-${GITHUB_RUN_ID}.sh"
-          AUTH_BOOTSTRAP_PASSWORD_B64=""
-          if [ -n "${AUTH_BOOTSTRAP_PASSWORD:-}" ]; then
-            AUTH_BOOTSTRAP_PASSWORD_B64="$(printf '%s' "$AUTH_BOOTSTRAP_PASSWORD" | base64 -w 0)"
-          fi
           ssh \
             -T \
             -o BatchMode=yes \
@@ -115,20 +110,15 @@ jobs:
             -p "$CVM_PORT" \
             -i ~/.ssh/cvm_deploy_key \
             "$CVM_USER@$CVM_HOST" \
-            "AUTH_BOOTSTRAP_PASSWORD_B64='$AUTH_BOOTSTRAP_PASSWORD_B64' CVM_PRIMARY_DOMAIN='$CVM_PRIMARY_DOMAIN' CVM_ALTERNATE_DOMAIN='$CVM_ALTERNATE_DOMAIN' RELEASE_PATH='$REMOTE_RELEASE' bash '$REMOTE_SCRIPT'"
+            "CVM_PRIMARY_DOMAIN='$CVM_PRIMARY_DOMAIN' CVM_ALTERNATE_DOMAIN='$CVM_ALTERNATE_DOMAIN' RELEASE_PATH='$REMOTE_RELEASE' bash '$REMOTE_SCRIPT'"
 
-      - name: Verify bootstrap admin login
+      - name: Verify anonymous workspace API
         env:
           CVM_HOST: ${{ secrets.CVM_HOST }}
           CVM_USER: ${{ secrets.CVM_USER || 'ubuntu' }}
           CVM_PORT: ${{ secrets.CVM_PORT || '22' }}
-          AUTH_BOOTSTRAP_PASSWORD: ${{ secrets.AUTH_BOOTSTRAP_PASSWORD }}
         run: |
           set -euo pipefail
-          AUTH_BOOTSTRAP_PASSWORD_B64=""
-          if [ -n "${AUTH_BOOTSTRAP_PASSWORD:-}" ]; then
-            AUTH_BOOTSTRAP_PASSWORD_B64="$(printf '%s' "$AUTH_BOOTSTRAP_PASSWORD" | base64 -w 0)"
-          fi
           ssh \
             -T \
             -o BatchMode=yes \
@@ -137,26 +127,16 @@ jobs:
             -p "$CVM_PORT" \
             -i ~/.ssh/cvm_deploy_key \
             "$CVM_USER@$CVM_HOST" \
-            "AUTH_BOOTSTRAP_PASSWORD_B64='$AUTH_BOOTSTRAP_PASSWORD_B64' bash -s" <<'REMOTE'
+            "bash -s" <<'REMOTE'
           set -euo pipefail
-          if [ -z "${AUTH_BOOTSTRAP_PASSWORD_B64:-}" ]; then
-            echo "bootstrap-admin-login-skip=no-secret"
-            exit 0
-          fi
           remote_dir="$HOME/ai-comic-workbench"
           docker compose --project-directory "$remote_dir" -f "$remote_dir/docker-compose.cvm.yml" \
-            exec -T -e AUTH_BOOTSTRAP_PASSWORD_B64 api node --input-type=module <<'NODE'
-          const password = Buffer.from(process.env.AUTH_BOOTSTRAP_PASSWORD_B64 || "", "base64").toString("utf8");
-          const response = await fetch("http://127.0.0.1:8787/api/auth/login", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ username: "admin", password })
-          });
-          console.log(`bootstrap-admin-login-status=${response.status}`);
-          if (!response.ok) {
-            console.error(`bootstrap-admin-login-failed=${await response.text()}`);
-            process.exit(1);
+            exec -T api node --input-type=module <<'NODE'
+          for (const path of ["/api/health", "/api/projects"]) {
+            const response = await fetch(`http://127.0.0.1:8787${path}`);
+            console.log(`${path}=${response.status}`);
+            if (!response.ok) process.exit(1);
           }
-          console.log("bootstrap-admin-login-ok");
+          console.log("anonymous-workspace-api-ok");
           NODE
           REMOTE

@@ -72,7 +72,6 @@ export class PrismaProjectStore implements ProjectStore {
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
-        ownerUserId: true,
         title: true,
         inspiration: true,
         status: true,
@@ -82,7 +81,6 @@ export class PrismaProjectStore implements ProjectStore {
     });
     return rows.map((row) => ({
       id: row.id,
-      ownerUserId: row.ownerUserId ?? undefined,
       title: row.title,
       inspiration: row.inspiration,
       status: row.status as ProjectSummary["status"],
@@ -120,7 +118,6 @@ export class PrismaProjectStore implements ProjectStore {
         where: { id: projectForSave.id },
         create: {
           id: projectForSave.id,
-          ownerUserId: projectForSave.ownerUserId ?? null,
           title: projectForSave.title,
           inspiration: projectForSave.inspiration,
           status: projectForSave.status,
@@ -133,7 +130,6 @@ export class PrismaProjectStore implements ProjectStore {
         },
         update: {
           title: projectForSave.title,
-          ownerUserId: projectForSave.ownerUserId ?? null,
           inspiration: projectForSave.inspiration,
           status: projectForSave.status,
           storyState: toJson(projectForSave.storyState),
@@ -333,7 +329,6 @@ export class PrismaProjectStore implements ProjectStore {
         where: { id: projectForSave.id },
         data: {
           title: projectForSave.title,
-          ownerUserId: projectForSave.ownerUserId ?? null,
           inspiration: projectForSave.inspiration,
           status: projectForSave.status,
           storyState: toJson(projectForSave.storyState),
@@ -558,7 +553,6 @@ function toProject(row: ProjectRow | ProjectWithWorkflowRows): Project {
       : [];
   const project = syncProjectWithSeedanceSegments({
     id: row.id,
-    ownerUserId: row.ownerUserId ?? undefined,
     title: row.title,
     inspiration: row.inspiration,
     status: row.status as Project["status"],

@@ -56,9 +56,6 @@ type VideoFlowMapProps = {
   onProjectChange: (project: Project) => void;
   onSave: (project: Project, message?: string) => Promise<void>;
   onAssistantMessage: (message: string) => void;
-  imageGenerationCostLabel: string;
-  videoGenerationCostLabel: string;
-  onBillingChange: () => void;
 };
 
 type NodePosition = { x: number; y: number };
@@ -245,10 +242,7 @@ export function VideoFlowMap({
   project,
   onProjectChange,
   onSave,
-  onAssistantMessage,
-  imageGenerationCostLabel,
-  videoGenerationCostLabel,
-  onBillingChange
+  onAssistantMessage
 }: VideoFlowMapProps) {
   const [flowId, setFlowId] = useState(project.videoFlows[0]?.id || "");
   const [nodePositions, setNodePositions] = useState<Record<string, NodePosition>>(() => collectPersistedNodePositions(project));
@@ -1558,7 +1552,6 @@ export function VideoFlowMap({
       applyProject(markVideoFailed(projectRef.current, flow.id, message));
       onAssistantMessage(message);
     } finally {
-      void onBillingChange();
       if (controller && videoGenerationControllers.current[flow.id] === controller) {
         delete videoGenerationControllers.current[flow.id];
         delete videoGenerationRequestIds.current[flow.id];
@@ -1801,7 +1794,6 @@ export function VideoFlowMap({
       });
       onAssistantMessage(message);
     } finally {
-      void onBillingChange();
       if (modelGenerationControllers.current[modelId] === controller) {
         delete modelGenerationControllers.current[modelId];
         delete modelGenerationRequestIds.current[modelId];
@@ -1861,7 +1853,6 @@ export function VideoFlowMap({
       });
       onAssistantMessage(message);
     } finally {
-      void onBillingChange();
       if (modelGenerationControllers.current[modelId] === controller) {
         delete modelGenerationControllers.current[modelId];
         delete modelGenerationRequestIds.current[modelId];
@@ -1931,7 +1922,6 @@ export function VideoFlowMap({
       );
       onAssistantMessage(message);
     } finally {
-      void onBillingChange();
       if (modelGenerationControllers.current[busyId] === controller) {
         delete modelGenerationControllers.current[busyId];
         delete modelGenerationRequestIds.current[busyId];
@@ -2537,7 +2527,6 @@ export function VideoFlowMap({
               isLoading={modelBusyId === model.id}
               loadingProgress={modelProgressById[model.id] || 0}
               error={model.error}
-              generationCostLabel={imageGenerationCostLabel}
               getDownloadUrl={(asset) => apiClient.assetDownloadUrl(project.id, asset.id)}
               onPromptChange={(value) => updateCharacterPrompt(model.id, value)}
               onPromptBlur={(value) => void saveCharacterPrompt(model.id, value)}
@@ -2586,7 +2575,6 @@ export function VideoFlowMap({
             isLoading={modelBusyId === model.id}
             loadingProgress={modelProgressById[model.id] || 0}
             error={model.error}
-            generationCostLabel={imageGenerationCostLabel}
             getDownloadUrl={(asset) => apiClient.assetDownloadUrl(project.id, asset.id)}
             onPromptChange={(value) => updateScenePrompt(model.id, value)}
             onAspectRatioChange={(value) => updateSceneAspectRatio(model.id, value)}
@@ -2648,7 +2636,6 @@ export function VideoFlowMap({
             isLoading={modelBusyId === busyId}
             loadingProgress={modelProgressById[busyId] || 0}
             error={targetFlow.nodes.promptNode.error}
-            generationCostLabel={imageGenerationCostLabel}
             getDownloadUrl={(asset) => apiClient.assetDownloadUrl(project.id, asset.id)}
             onPromptChange={(value) => updateImagePromptText(targetFlow.id, value)}
             onAspectRatioChange={(value) => updateImagePromptAspectRatio(targetFlow.id, value)}
@@ -2784,7 +2771,7 @@ export function VideoFlowMap({
             disabled={currentVideoActionDisabled}
           >
             {currentVideoCancellable ? <X size={16} /> : <Wand2 size={16} />}
-            {currentVideoCancellable ? "取消生成" : `生成当前 15 秒 · ${videoGenerationCostLabel}`}
+            {currentVideoCancellable ? "取消生成" : "生成当前 15 秒"}
           </button>
         </div>
         <div

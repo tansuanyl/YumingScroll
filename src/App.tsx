@@ -1,33 +1,24 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { AdminUsers } from "./components/AdminUsers";
 import { AppShell } from "./components/AppShell";
 import { CharacterModels } from "./components/CharacterModels";
-import { LoginScreen } from "./components/LoginScreen";
 import { ProjectOverview } from "./components/ProjectOverview";
-import { RechargeDialog } from "./components/RechargeDialog";
 import { SceneModels } from "./components/SceneModels";
 import { TextCreation } from "./components/TextCreation";
 import { VideoFlowMap } from "./components/VideoFlowMap";
 import { Hero1 } from "./components/ui/hero-1";
 import { apiClient, type TextModelSelection } from "./lib/apiClient";
-import {
-  RECHARGE_BILLING_SYNC_WINDOW_MS,
-  applyBillingStatusToUser,
-  canRequestRecharge,
-  formatGenerationCost,
-  getBillingSyncIntervalMs
-} from "./lib/billing";
 import { generateStoryInNewHomeProject, importSourceInNewHomeProject } from "./lib/homeProjectGeneration";
 import { normalizeProjectVideoFlows } from "./lib/projectFlowSync";
 import { getProjectLoadOrder, readStoredActiveProjectId, rememberActiveProjectId } from "./lib/projectSelection";
 import { SOURCE_IMPORT_MAX_FILE_BYTES, buildSourceFilePayload } from "./lib/sourceImportFile";
-import type { AuthUser, PageKey, Project } from "./types/domain";
+import { getProviderReadiness, type ProviderStatusSnapshot } from "./lib/providerReadiness";
+import type { PageKey, Project } from "./types/domain";
+
+const LOCAL_WORKSPACE_ID = "local-workspace";
 
 export default function App() {
   const [page, setPageState] = useState<PageKey>(() => readInitialPage());
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [projectCatalog, setProjectCatalog] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,77 +28,27 @@ export default function App() {
   const [homeGenerationStartedAt, setHomeGenerationStartedAt] = useState<number | null>(null);
   const [homeGenerationProjectId, setHomeGenerationProjectId] = useState<string | null>(null);
   const [homeErrorMessage, setHomeErrorMessage] = useState<string | null>(null);
-  const [rechargeOpen, setRechargeOpen] = useState(false);
-  const [rechargeSyncUntil, setRechargeSyncUntil] = useState<number | null>(null);
+  const [providerStatus, setProviderStatus] = useState<ProviderStatusSnapshot | null>(null);
   const [assistantMessage, setAssistantMessage] = useState("正在加载项目...");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadAuth() {
-      try {
-        const result = await apiClient.me();
-        setAuthUser(result.user);
-      } catch {
-        setAuthUser(null);
-      } finally {
-        setAuthLoading(false);
-      }
-    }
-    void loadAuth();
-  }, []);
-
-  useEffect(() => {
-    const initialIntervalMs = getBillingSyncIntervalMs(authUser, rechargeSyncUntil);
-    if (!initialIntervalMs || !authUser) return;
-    const syncedUser = authUser;
-    const userId = syncedUser.id;
-    let timeoutId: number | undefined;
     let cancelled = false;
-
-    function scheduleNextSync() {
-      if (timeoutId) window.clearTimeout(timeoutId);
-      const intervalMs = getBillingSyncIntervalMs(syncedUser, rechargeSyncUntil) || initialIntervalMs;
-      timeoutId = window.setTimeout(() => void syncBillingStatus(), intervalMs);
-    }
-
-    async function syncBillingStatus() {
-      try {
-        const billingStatus = await apiClient.billingMe();
-        if (cancelled) return;
-        const balanceChanged = syncedUser.billingMode !== billingStatus.billingMode || syncedUser.coinBalance !== billingStatus.coinBalance;
-        setAuthUser((current) => {
-          if (!current || current.id !== userId) return current;
-          if (current.billingMode === billingStatus.billingMode && current.coinBalance === billingStatus.coinBalance) return current;
-          return applyBillingStatusToUser(current, billingStatus);
-        });
-        if (balanceChanged) setRechargeSyncUntil(null);
-      } catch {
-        // Keep the last visible balance if a background refresh misses.
-      } finally {
-        if (!cancelled) scheduleNextSync();
-      }
-    }
-
-    const handleFocus = () => void syncBillingStatus();
-    const handleVisibilityChange = () => {
-      if (!document.hidden) void syncBillingStatus();
-    };
-
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    void syncBillingStatus();
+    setProviderStatus(null);
+    void Promise.all([apiClient.textProviderStatus(), apiClient.mediaProviderStatus()])
+      .then(([text, media]) => {
+        if (!cancelled) setProviderStatus({ text, media });
+      })
+      .catch(() => {
+        if (!cancelled) setProviderStatus(null);
+      });
 
     return () => {
       cancelled = true;
-      if (timeoutId) window.clearTimeout(timeoutId);
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [authUser?.id, authUser?.billingMode, rechargeSyncUntil]);
+  }, []);
 
   useEffect(() => {
-    if (authLoading || !authUser) return;
-    const currentUser = authUser;
     setShowHome(window.sessionStorage.getItem("ai-comic-workbench-entered") !== "true");
     setLoading(true);
     setError(null);
@@ -121,7 +62,7 @@ export default function App() {
           .filter(isProject)
           .map(normalizeVideoFlows);
         let activeProject: Project | undefined;
-        for (const projectId of getProjectLoadOrder(projectSummaries, readStoredActiveProjectId(currentUser.id))) {
+        for (const projectId of getProjectLoadOrder(projectSummaries, readStoredActiveProjectId(LOCAL_WORKSPACE_ID))) {
           activeProject = loadedProjects.find((item) => item.id === projectId);
           if (activeProject) break;
         }
@@ -135,7 +76,7 @@ export default function App() {
         loadedProjects = upsertProjectCatalog(loadedProjects, normalizedProject);
         setProject(normalizedProject);
         setProjectCatalog(loadedProjects);
-        rememberActiveProjectId(currentUser.id, normalizedProject.id);
+        rememberActiveProjectId(LOCAL_WORKSPACE_ID, normalizedProject.id);
         if (normalizedProject !== activeProject) {
           const saved = normalizeVideoFlows(await apiClient.saveProject(normalizedProject));
           setProject(saved);
@@ -150,13 +91,7 @@ export default function App() {
       }
     }
     void load();
-  }, [authLoading, authUser?.id]);
-
-  useEffect(() => {
-    if (authUser?.role !== "admin" && page === "admin") {
-      setPage("overview");
-    }
-  }, [authUser?.role, page]);
+  }, []);
 
   useEffect(() => {
     if (!showHome || !homeGenerating || !homeGenerationStartedAt || !homeGenerationProjectId) return;
@@ -183,23 +118,8 @@ export default function App() {
   async function saveProject(nextProject: Project, message = "项目已保存。") {
     const saved = normalizeVideoFlows(await apiClient.saveProject(nextProject));
     updateActiveProject(saved);
-    if (authUser) rememberActiveProjectId(authUser.id, saved.id);
+    rememberActiveProjectId(LOCAL_WORKSPACE_ID, saved.id);
     setAssistantMessage(message);
-  }
-
-  if (authLoading) {
-    return <div className="boot-screen">正在检查登录状态...</div>;
-  }
-
-  if (!authUser) {
-    return (
-      <LoginScreen
-        onLogin={handleLogin}
-        onRegister={handleRegister}
-        onResendVerification={apiClient.resendEmailVerification}
-        onPasswordReset={handlePasswordReset}
-      />
-    );
   }
 
   if (loading) {
@@ -217,26 +137,17 @@ export default function App() {
 
   if (showHome) {
     return (
-      <>
-        <Hero1
-          isLoading={homeGenerating}
-          errorMessage={homeErrorMessage}
-          currentProjectTitle={project.status !== "draft" ? project.title : undefined}
-          authUser={authUser}
-          selectedTextModel={homeTextModel}
-          generationCostLabel={formatGenerationCost(authUser, "text")}
-          onTextModelChange={setHomeTextModel}
-          onOpenRecharge={openRecharge}
-          onOpenAdmin={openAdminPanel}
-          onLogout={() => void handleLogout()}
-          onOpenWorkbench={() => enterTextWorkbench(project, "已进入当前项目。")}
-          onSubmit={(prompt) => void startFromHome(prompt)}
-          onImportSourceFile={(file) => void startSourceImportFromHome(file)}
-        />
-        {rechargeOpen ? (
-          <RechargeDialog user={authUser} onClose={() => setRechargeOpen(false)} onSubmitted={handleRechargeSubmitted} />
-        ) : null}
-      </>
+      <Hero1
+        isLoading={homeGenerating}
+        errorMessage={homeErrorMessage}
+        currentProjectTitle={project.status !== "draft" ? project.title : undefined}
+        selectedTextModel={homeTextModel}
+        providerReadiness={getProviderReadiness(providerStatus, homeTextModel)}
+        onTextModelChange={setHomeTextModel}
+        onOpenWorkbench={() => enterTextWorkbench(project, "已进入当前项目。")}
+        onSubmit={(prompt) => void startFromHome(prompt)}
+        onImportSourceFile={(file) => void startSourceImportFromHome(file)}
+      />
     );
   }
 
@@ -258,8 +169,6 @@ export default function App() {
         onProjectChange={updateActiveProject}
         onSave={saveProject}
         onAssistantMessage={setAssistantMessage}
-        generationCostLabel={formatGenerationCost(authUser, "text")}
-        onBillingChange={refreshAuthUser}
       />
     ),
     characters: (
@@ -268,8 +177,6 @@ export default function App() {
         onProjectChange={updateActiveProject}
         onSave={saveProject}
         onAssistantMessage={setAssistantMessage}
-        generationCostLabel={formatGenerationCost(authUser, "image")}
-        onBillingChange={refreshAuthUser}
       />
     ),
     scenes: (
@@ -278,8 +185,6 @@ export default function App() {
         onProjectChange={updateActiveProject}
         onSave={saveProject}
         onAssistantMessage={setAssistantMessage}
-        generationCostLabel={formatGenerationCost(authUser, "image")}
-        onBillingChange={refreshAuthUser}
       />
     ),
     flow: (
@@ -288,44 +193,14 @@ export default function App() {
         onProjectChange={updateActiveProject}
         onSave={saveProject}
         onAssistantMessage={setAssistantMessage}
-        imageGenerationCostLabel={formatGenerationCost(authUser, "image")}
-        videoGenerationCostLabel={formatGenerationCost(authUser, "video")}
-        onBillingChange={refreshAuthUser}
       />
-    ),
-    admin:
-      authUser.role === "admin" ? (
-        <AdminUsers currentUser={authUser} />
-      ) : (
-        <ProjectOverview
-          project={project}
-          projectCatalog={projectCatalog}
-          onSelectProject={(projectId) => void openProject(projectId)}
-          onProjectChange={updateActiveProject}
-          onSave={saveProject}
-          onAssistantMessage={setAssistantMessage}
-          onNavigate={setPage}
-        />
-      )
+    )
   };
 
   return (
-    <>
-      <AppShell
-        project={project}
-        page={page}
-        authUser={authUser}
-        onNavigate={setPage}
-        onReturnHome={returnHome}
-        onOpenRecharge={openRecharge}
-        onLogout={() => void handleLogout()}
-      >
-        {pages[page]}
-      </AppShell>
-      {rechargeOpen ? (
-        <RechargeDialog user={authUser} onClose={() => setRechargeOpen(false)} onSubmitted={handleRechargeSubmitted} />
-      ) : null}
-    </>
+    <AppShell project={project} page={page} onNavigate={setPage} onReturnHome={returnHome}>
+      {pages[page]}
+    </AppShell>
   );
 
   function setPage(nextPage: PageKey) {
@@ -357,7 +232,7 @@ export default function App() {
             generationProjectId = draftProject.id;
             setHomeGenerationProjectId(draftProject.id);
             updateActiveProject(draftProject);
-            if (authUser) rememberActiveProjectId(authUser.id, draftProject.id);
+            rememberActiveProjectId(LOCAL_WORKSPACE_ID, draftProject.id);
           }
         }
       );
@@ -373,7 +248,6 @@ export default function App() {
       setHomeErrorMessage(message);
       setAssistantMessage(message);
     } finally {
-      void refreshAuthUser();
       if (!recovered) {
         setHomeGenerating(false);
         setHomeGenerationStartedAt(null);
@@ -413,7 +287,7 @@ export default function App() {
             generationProjectId = draftProject.id;
             setHomeGenerationProjectId(draftProject.id);
             updateActiveProject(draftProject);
-            if (authUser) rememberActiveProjectId(authUser.id, draftProject.id);
+            rememberActiveProjectId(LOCAL_WORKSPACE_ID, draftProject.id);
           }
         }
       );
@@ -429,7 +303,6 @@ export default function App() {
       setHomeErrorMessage(message);
       setAssistantMessage(message);
     } finally {
-      void refreshAuthUser();
       if (!recovered) {
         setHomeGenerating(false);
         setHomeGenerationStartedAt(null);
@@ -459,7 +332,7 @@ export default function App() {
 
   function enterTextWorkbench(nextProject: Project, message: string) {
     updateActiveProject(nextProject);
-    if (authUser) rememberActiveProjectId(authUser.id, nextProject.id);
+    rememberActiveProjectId(LOCAL_WORKSPACE_ID, nextProject.id);
     window.sessionStorage.setItem("ai-comic-workbench-entered", "true");
     setPage("text");
     setShowHome(false);
@@ -479,7 +352,7 @@ export default function App() {
     try {
       const selectedProject = normalizeVideoFlows(await apiClient.getProject(projectId));
       updateActiveProject(selectedProject);
-      if (authUser) rememberActiveProjectId(authUser.id, selectedProject.id);
+      rememberActiveProjectId(LOCAL_WORKSPACE_ID, selectedProject.id);
       window.sessionStorage.setItem("ai-comic-workbench-entered", "true");
       setShowHome(false);
       setPage("overview");
@@ -504,65 +377,13 @@ export default function App() {
     setPageState("overview");
   }
 
-  async function handleLogin(input: { username: string; password: string }) {
-    const result = await apiClient.login(input);
-    setAuthUser(result.user);
-    setProject(null);
-    setProjectCatalog([]);
-    setLoading(true);
-    window.sessionStorage.removeItem("ai-comic-workbench-entered");
-    window.sessionStorage.removeItem("ai-comic-active-page");
-  }
-
-  async function handleRegister(input: { email: string; password: string; displayName?: string }) {
-    return apiClient.register(input);
-  }
-
-  async function handlePasswordReset(input: { username: string; contact?: string }) {
-    await apiClient.requestPasswordReset(input);
-  }
-
-  async function refreshAuthUser() {
-    const result = await apiClient.me().catch(() => ({ user: null }));
-    if (result.user) setAuthUser(result.user);
-  }
-
-  async function handleRechargeSubmitted() {
-    setRechargeSyncUntil(Date.now() + RECHARGE_BILLING_SYNC_WINDOW_MS);
-    await refreshAuthUser();
-  }
-
-  function openRecharge() {
-    if (canRequestRecharge(authUser)) setRechargeOpen(true);
-  }
-
-  function openAdminPanel() {
-    if (authUser?.role !== "admin") return;
-    window.sessionStorage.setItem("ai-comic-workbench-entered", "true");
-    setShowHome(false);
-    setPage("admin");
-  }
-
-  async function handleLogout() {
-    await apiClient.logout().catch(() => undefined);
-    setRechargeOpen(false);
-    setRechargeSyncUntil(null);
-    setAuthUser(null);
-    setProject(null);
-    setProjectCatalog([]);
-    setLoading(true);
-    setShowHome(true);
-    setPageState("overview");
-    window.sessionStorage.removeItem("ai-comic-workbench-entered");
-    window.sessionStorage.removeItem("ai-comic-active-page");
-  }
 }
 
 function readInitialPage(): PageKey {
   if (typeof window === "undefined") return "overview";
   const storedPage = window.sessionStorage.getItem("ai-comic-active-page");
   if (storedPage === "characters" || storedPage === "scenes") return "flow";
-  if (storedPage === "overview" || storedPage === "text" || storedPage === "flow" || storedPage === "admin") {
+  if (storedPage === "overview" || storedPage === "text" || storedPage === "flow") {
     return storedPage;
   }
   return "overview";

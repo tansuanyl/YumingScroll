@@ -20,8 +20,6 @@ services:
       dockerfile: Dockerfile
       args:
         API_PROXY_TARGET: http://api:8787
-        NEXT_PUBLIC_RECHARGE_WECHAT_QR_URL: ${NEXT_PUBLIC_RECHARGE_WECHAT_QR_URL:-}
-        NEXT_PUBLIC_RECHARGE_ALIPAY_QR_URL: ${NEXT_PUBLIC_RECHARGE_ALIPAY_QR_URL:-}
         NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}
     image: ai-comic-workbench:prod
     restart: unless-stopped

@@ -1,0 +1,9 @@
+ALTER TABLE "Project" DROP CONSTRAINT IF EXISTS "Project_ownerUserId_fkey";
+ALTER TABLE "Project" DROP COLUMN IF EXISTS "ownerUserId";
+
+DROP TABLE IF EXISTS "CoinLedger";
+DROP TABLE IF EXISTS "RechargeRequest";
+DROP TABLE IF EXISTS "PasswordResetRequest";
+DROP TABLE IF EXISTS "AuthSession";
+DROP TABLE IF EXISTS "UsageLog";
+DROP TABLE IF EXISTS "AppUser";

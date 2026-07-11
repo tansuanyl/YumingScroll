@@ -203,7 +203,6 @@ function normalizeProjectForRead(project: Project): Project {
 function toProjectSummary(project: Project): ProjectSummary {
   return {
     id: project.id,
-    ownerUserId: project.ownerUserId,
     title: project.title,
     inspiration: project.inspiration,
     status: project.status,

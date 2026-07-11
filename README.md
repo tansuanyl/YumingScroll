@@ -5,7 +5,10 @@
 
 喻鸣绘卷是一个可自托管的 AI 漫剧创作工作台，把故事文本、人物与场景模型、分镜脚本、Flow Map、图片和视频资产组织在同一个项目中。
 
-> 当前处于早期开发阶段。Mock 模式可用于本地体验和开发；真实生成需要部署者自己的模型服务账号，并可能产生第三方 API 费用。
+> [!IMPORTANT]
+> **请在评估生成效果前配置真实 AI Provider API Key。** Mock 模式只返回用于验证界面和工作流的示例结果，不代表 OpenAI、Kimi、Seedance 或其他真实模型的生成质量。API Key 必须配置在服务端环境变量中，不能放进浏览器或 `NEXT_PUBLIC_*` 变量。
+
+项目当前处于早期开发阶段。真实生成需要部署者自己的模型服务账号，并可能产生第三方 API 费用。
 
 ## 功能
 
@@ -14,7 +17,7 @@
 - 用 Flow Map 连接人物、场景、画风和当前 15 秒脚本
 - 生成并恢复异步视频任务，管理相邻片段的连续性
 - 在 Gallery 中预览、复用、下载和删除项目资产
-- 支持账号、邮箱验证、管理员权限和可选 coins 计费
+- 无需注册或登录，打开本地工作台即可使用
 - 支持本地 JSON 或 PostgreSQL 项目存储
 - 支持本地磁盘或 S3-compatible 媒体存储
 
@@ -38,17 +41,26 @@ npm ci
 cp .env.example .env
 ```
 
-第一次体验建议把 `.env` 调整为零密钥 Mock 模式：
+### 推荐：配置真实 Provider 后体验
+
+要评估项目的实际生成效果，请先在 `.env` 中关闭 Mock，并至少配置一个文本 Provider；图片和视频生成还需要媒体 Provider：
 
 ```env
 APP_ENV=local
 DATABASE_URL=
-MOCK_PROVIDERS=true
-OPENAI_MOCK=true
-SEEDANCE_MOCK=true
-AUTH_BOOTSTRAP_USERNAME=admin
-AUTH_BOOTSTRAP_PASSWORD=change-this-local-password
+MOCK_PROVIDERS=false
+
+# 文本生成：OpenAI 与 Moonshot/Kimi 至少配置一个
+OPENAI_MOCK=false
+OPENAI_API_KEY=your-openai-api-key
+MOONSHOT_API_KEY=
+
+# 图片与视频生成
+SEEDANCE_MOCK=false
+SEEDANCE_API_KEY=your-seedance-api-key
 ```
+
+不要把填写过真实 Key 的 `.env` 提交到 Git。模型、兼容接口和更多变量说明见[配置真实 AI 服务](#配置真实-ai-服务)。
 
 启动 Web 和 API：
 
@@ -60,7 +72,19 @@ npm run dev
 - API：`http://127.0.0.1:8787`
 - 健康检查：`http://127.0.0.1:8787/api/health`
 
-使用上面配置的本地管理员账号登录。Mock 模式会返回结构化示例结果，不会调用外部模型服务。
+打开 Web 地址即可直接进入工作台，无需注册或登录。首页会检查文本与媒体 Provider 状态：所选文本模型未配置时会阻止生成；Mock 或媒体未配置时会明确提示。
+
+### 仅验证界面与流程：Mock 模式
+
+没有 Provider 账号时，可以把 `.env` 调整为零密钥 Mock 模式：
+
+```env
+MOCK_PROVIDERS=true
+OPENAI_MOCK=true
+SEEDANCE_MOCK=true
+```
+
+Mock 模式不会调用外部模型，只返回结构化示例结果。请勿用这些结果评价项目的文本、图片或视频生成质量。
 
 ## PostgreSQL 模式
 
@@ -72,7 +96,7 @@ npm run db:deploy
 npm run dev
 ```
 
-`.env.example` 默认使用本地 PostgreSQL。将 `DATABASE_URL` 留空时，项目与认证数据改用本地 JSON/内存实现，适合演示，不建议用于生产。
+`.env.example` 默认使用本地 PostgreSQL。将 `DATABASE_URL` 留空时，项目数据改用本地 JSON 文件，适合个人本地使用。
 
 ## 配置真实 AI 服务
 
@@ -105,22 +129,13 @@ SEEDANCE_IMAGE_MODEL=doubao-seedream-4-0-250828
 SEEDANCE_VIDEO_MODEL=doubao-seedance-2-0-260128
 ```
 
-模型名称、接口能力和计费可能随提供商变化。部署者需要根据自己的服务账号更新配置，并遵守相应条款、内容政策和数据保留规则。
+软件本身不提供 coins/token 计费，也不收取生成费用。模型名称、接口能力和费用可能随第三方 Provider 变化，调用费用由部署者自己的 Provider 账号承担。请遵守相应条款、内容政策和数据保留规则。
 
-配置完成后重启 API 服务。登录后可通过 `/api/text/provider-status` 和 `/api/media/provider-status` 检查状态；响应只包含 `configured`、模式和模型信息，不会返回 Key。
+配置完成后重启 API 服务。可通过 `/api/text/provider-status` 和 `/api/media/provider-status` 检查状态；响应只包含 `configured`、模式和模型信息，不会返回 Key。
 
-## 媒体与支付配置
+## 媒体存储
 
 生产环境建议使用 S3-compatible 存储，详见 [媒体存储文档](./docs/media-storage.md)。
-
-仓库不分发任何收款二维码。需要启用手动充值时，由部署者配置公开 HTTPS URL 或站内绝对路径：
-
-```env
-NEXT_PUBLIC_RECHARGE_WECHAT_QR_URL=
-NEXT_PUBLIC_RECHARGE_ALIPAY_QR_URL=
-```
-
-保持为空时充值入口自动隐藏。这些变量会进入浏览器构建，只能用于公开资源 URL，不能存放密钥。
 
 ## 验证
 
@@ -138,10 +153,10 @@ CI 会在 push 和 pull request 中执行类型检查、测试、构建、依赖
 
 ```text
 app/                 Next.js 页面与同域 API 代理
-src/components/      工作台、Gallery、Flow Map 和账号界面
+src/components/      工作台、Gallery 和 Flow Map 界面
 src/lib/             前端状态、连接关系和项目资产逻辑
-server/nest/         NestJS controllers、guard 和错误处理
-server/services/     文本、媒体、存储、认证和项目服务
+server/nest/         NestJS controllers 和错误处理
+server/services/     文本、媒体、存储和项目服务
 server/providers/    OpenAI 与图片/视频 Provider 适配器
 prisma/              Schema 与 migrations
 tests/               Vitest 单元和集成测试
@@ -154,7 +169,7 @@ docs/                部署、存储和提示框架文档
 - 腾讯云部署：[腾讯云部署说明](./docs/tencent-cloud-deployment.md)
 - GitHub Actions 手动部署：[CVM Actions 部署](./docs/github-actions-deployment.md)
 
-生产部署前必须更换管理员密码、启用安全 Cookie、配置 HTTPS、持久数据库和持久媒体存储。不要把 `.env`、数据库、上传文件或生成素材提交到 Git。
+这个版本按单用户自托管场景设计，没有内置账户或访问控制。部署到公网前请自行在反向代理或私有网络层增加访问保护，并配置 HTTPS、持久数据库和持久媒体存储。不要把 `.env`、数据库、上传文件或生成素材提交到 Git。
 
 ## 隐私与安全
 

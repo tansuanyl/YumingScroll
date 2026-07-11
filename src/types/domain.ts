@@ -1,6 +1,6 @@
 export type ProjectStatus = "draft" | "text-ready" | "models-ready" | "video-ready" | "exported";
 export type GenerationStatus = "idle" | "generating" | "ready" | "failed";
-export type PageKey = "overview" | "text" | "characters" | "scenes" | "flow" | "admin";
+export type PageKey = "overview" | "text" | "characters" | "scenes" | "flow";
 export type TextModelSelection = "gpt-5.5" | "kimi-k2.6";
 export type VideoAspectRatio = "9:16" | "16:9" | "9:21" | "21:9";
 export type FlowMapNodeOffset = { x: number; y: number };
@@ -179,7 +179,6 @@ export type VideoFlow = {
 
 export type Project = {
   id: string;
-  ownerUserId?: string;
   title: string;
   inspiration: string;
   status: ProjectStatus;
@@ -194,86 +193,4 @@ export type Project = {
   textGenerationRequestId?: string;
 };
 
-export type ProjectSummary = Pick<Project, "id" | "ownerUserId" | "title" | "inspiration" | "status" | "createdAt" | "updatedAt">;
-
-export type AuthRole = "admin" | "tester";
-export type AuthStatus = "active" | "disabled";
-export type BillingMode = "free" | "coins";
-export type PaymentMethod = "wechat" | "alipay";
-export type RechargeStatus = "pending" | "approved" | "rejected";
-export type PasswordResetStatus = "pending" | "completed" | "rejected";
-
-export type AuthUser = {
-  id: string;
-  username: string;
-  email?: string;
-  emailVerifiedAt?: string;
-  emailVerificationRequired?: boolean;
-  emailVerificationSentAt?: string;
-  emailVerificationExpiresAt?: string;
-  displayName?: string;
-  role: AuthRole;
-  status: AuthStatus;
-  billingMode: BillingMode;
-  coinBalance: number;
-  note?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  lastLoginAt?: string;
-};
-
-export type EmailVerificationResponse = {
-  sent: boolean;
-  mailerConfigured: boolean;
-  expiresAt?: string;
-  url?: string;
-  error?: string;
-};
-
-export type AccountHealthRecord = {
-  user: AuthUser;
-  flags: Array<{
-    code: "email_unverified" | "email_verification_expired" | "disabled" | "never_logged_in" | "coins_empty";
-    severity: "info" | "warning" | "danger";
-    label: string;
-  }>;
-  canLogin: boolean;
-  needsEmailAction: boolean;
-};
-
-export type BillingStatus = {
-  billingMode: BillingMode;
-  coinBalance: number;
-  costs: {
-    text: number;
-    image: number;
-    video: number;
-  };
-  rechargeRateCnyToCoins: number;
-};
-
-export type RechargeRequest = {
-  id: string;
-  userId: string;
-  paymentMethod: PaymentMethod;
-  amountCny: number;
-  coins: number;
-  status: RechargeStatus;
-  note?: string;
-  reviewedByUserId?: string;
-  reviewedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type PasswordResetRequest = {
-  id: string;
-  userId: string;
-  username: string;
-  contact?: string;
-  status: PasswordResetStatus;
-  reviewedByUserId?: string;
-  reviewedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
+export type ProjectSummary = Pick<Project, "id" | "title" | "inspiration" | "status" | "createdAt" | "updatedAt">;

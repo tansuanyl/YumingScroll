@@ -14,17 +14,13 @@ type SceneModelsProps = {
   onProjectChange: (project: Project) => void;
   onSave: (project: Project, message?: string) => Promise<void>;
   onAssistantMessage: (message: string) => void;
-  generationCostLabel: string;
-  onBillingChange: () => void;
 };
 
 export function SceneModels({
   project,
   onProjectChange,
   onSave,
-  onAssistantMessage,
-  generationCostLabel,
-  onBillingChange
+  onAssistantMessage
 }: SceneModelsProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [progressById, setProgressById] = useState<Record<string, number>>({});
@@ -122,7 +118,6 @@ export function SceneModels({
       });
       onAssistantMessage(error instanceof Error ? error.message : "场景图生成失败");
     } finally {
-      void onBillingChange();
       if (generationControllers.current[sceneModelId] === controller) {
         delete generationControllers.current[sceneModelId];
         delete generationRequestIds.current[sceneModelId];
@@ -197,7 +192,6 @@ export function SceneModels({
             isLoading={busyId === model.id}
             loadingProgress={progressById[model.id] || 0}
             error={model.error}
-            generationCostLabel={generationCostLabel}
             getDownloadUrl={(asset) => apiClient.assetDownloadUrl(project.id, asset.id)}
             onPromptChange={(value) => updateScenePrompt(model.id, value)}
             onAspectRatioChange={(value) => updateAspectRatio(model.id, value)}
