@@ -1,23 +1,17 @@
 import * as React from "react";
-import { FileText, Loader2, Paperclip, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, FileText, KeyRound, Loader2, Paperclip, Sparkles } from "lucide-react";
 import type { TextModelSelection } from "../../lib/apiClient";
+import { PROVIDER_CONFIGURATION_GUIDE_URL, type ProviderReadiness } from "../../lib/providerReadiness";
 import { SOURCE_IMPORT_ACCEPT } from "../../lib/sourceImportFile";
-import type { AuthUser } from "../../types/domain";
-import { AccountCenterButton } from "../AccountCenterButton";
-import { BalancePill } from "../BalancePill";
 import { BrandMark } from "../BrandMark";
 
 type Hero1Props = {
   isLoading?: boolean;
   errorMessage?: string | null;
   currentProjectTitle?: string;
-  authUser: AuthUser;
   selectedTextModel: TextModelSelection;
-  generationCostLabel: string;
+  providerReadiness?: ProviderReadiness | null;
   onTextModelChange: (model: TextModelSelection) => void;
-  onOpenRecharge: () => void;
-  onOpenAdmin?: () => void;
-  onLogout: () => void;
   onOpenWorkbench?: () => void;
   onSubmit: (prompt: string) => void;
   onImportSourceFile?: (file: File) => void;
@@ -40,13 +34,9 @@ const Hero1 = ({
   isLoading = false,
   errorMessage = null,
   currentProjectTitle,
-  authUser,
   selectedTextModel,
-  generationCostLabel,
+  providerReadiness,
   onTextModelChange,
-  onOpenRecharge,
-  onOpenAdmin,
-  onLogout,
   onOpenWorkbench,
   onSubmit,
   onImportSourceFile
@@ -54,10 +44,17 @@ const Hero1 = ({
   const [prompt, setPrompt] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
   const sourceFileInputRef = React.useRef<HTMLInputElement>(null);
+  const generationBlocked = providerReadiness?.blockTextGeneration === true;
+  const ProviderIcon =
+    providerReadiness?.tone === "ready"
+      ? CheckCircle2
+      : providerReadiness?.tone === "blocked"
+        ? KeyRound
+        : AlertTriangle;
 
   function submit(nextPrompt = prompt) {
     const value = nextPrompt.trim();
-    if (!value || isLoading) return;
+    if (!value || isLoading || generationBlocked) return;
     onSubmit(value);
   }
 
@@ -77,8 +74,6 @@ const Hero1 = ({
       <header className="relative z-30 flex items-center justify-between gap-4 p-6">
         <BrandMark className="hero-brand-mark" />
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <BalancePill user={authUser} onOpenRecharge={onOpenRecharge} className="hero-balance-pill" />
-          <AccountCenterButton user={authUser} onOpenAdmin={onOpenAdmin} onLogout={onLogout} />
           {onOpenWorkbench ? (
             <button
               type="button"
@@ -117,12 +112,43 @@ const Hero1 = ({
             描述题材、人物关系、核心悬念或画面风格。系统会先进入文本创作页，生成世界观、剧情大纲、分镜和 Seedance 2.0 分镜脚本。
           </p>
 
+          {providerReadiness ? (
+            <div
+              role={providerReadiness.tone === "blocked" ? "alert" : "status"}
+              className={[
+                "mx-auto flex w-full max-w-2xl flex-col gap-3 rounded-lg border px-4 py-3 text-left sm:flex-row sm:items-center sm:justify-between",
+                providerReadiness.tone === "blocked"
+                  ? "border-red-400/40 bg-red-500/12 text-red-50"
+                  : providerReadiness.tone === "warning"
+                    ? "border-amber-300/35 bg-amber-400/10 text-amber-50"
+                    : "border-emerald-300/30 bg-emerald-400/10 text-emerald-50"
+              ].join(" ")}
+            >
+              <div className="flex min-w-0 gap-3">
+                <ProviderIcon className="mt-0.5 size-5 shrink-0" />
+                <div className="min-w-0">
+                  <strong className="block text-sm leading-5">{providerReadiness.title}</strong>
+                  <p className="mt-1 text-xs leading-5 text-current/75">{providerReadiness.detail}</p>
+                </div>
+              </div>
+              <a
+                className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-current underline decoration-current/35 underline-offset-4 hover:decoration-current"
+                href={PROVIDER_CONFIGURATION_GUIDE_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                配置指南
+                <ExternalLink className="size-3.5" />
+              </a>
+            </div>
+          ) : null}
+
           <div className="mx-auto w-full max-w-2xl">
             <div className="flex items-center rounded-full bg-[#1c1528] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.35)] ring-1 ring-white/10">
               <button
                 type="button"
                 className="grid size-10 place-items-center rounded-full text-gray-400 transition hover:bg-[#2a1f3d]"
-                disabled={isLoading}
+                disabled={isLoading || generationBlocked}
                 onClick={() => sourceFileInputRef.current?.click()}
                 aria-label="导入小说或文本文件"
               >
@@ -133,7 +159,7 @@ const Hero1 = ({
                 type="file"
                 className="hidden"
                 accept={SOURCE_IMPORT_ACCEPT}
-                disabled={isLoading}
+                disabled={isLoading || generationBlocked}
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];
                   if (file) onImportSourceFile?.(file);
@@ -144,11 +170,19 @@ const Hero1 = ({
                 type="button"
                 className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-purple-500 px-3 text-xs font-semibold text-white transition hover:bg-purple-400 disabled:cursor-not-allowed disabled:opacity-70"
                 onClick={() => submit()}
-                disabled={isLoading}
-                aria-label="生成初版文本"
+                disabled={isLoading || generationBlocked}
+                aria-label={generationBlocked ? "请先配置所选文本模型 API Key" : "生成初版文本"}
               >
-                {isLoading ? <Loader2 className="size-5 animate-spin" /> : <Sparkles className="size-5" />}
-                <span className="hidden sm:inline">{isLoading ? "生成中" : generationCostLabel}</span>
+                {isLoading ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : generationBlocked ? (
+                  <KeyRound className="size-5" />
+                ) : (
+                  <Sparkles className="size-5" />
+                )}
+                <span className="hidden sm:inline">
+                  {isLoading ? "生成中" : generationBlocked ? "请先配置 API" : "生成初版"}
+                </span>
               </button>
               <input
                 ref={inputRef}

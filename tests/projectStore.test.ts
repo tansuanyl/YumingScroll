@@ -12,14 +12,12 @@ describe("ProjectStore", () => {
     try {
       const store = new ProjectStore(join(dir, "projects.json"));
       const project = createDemoProject();
-      project.ownerUserId = "user-1";
       await store.save(project);
 
       expect(await store.list()).toHaveLength(1);
-      expect((await store.listSummaries())[0].ownerUserId).toBe("user-1");
+      expect((await store.listSummaries())[0].id).toBe(project.id);
       const loaded = await store.get(project.id);
       expect(loaded?.title).toBe(project.title);
-      expect(loaded?.ownerUserId).toBe("user-1");
       expect(loaded?.workflowEdges.filter((edge) => edge.kind === "image-prompt")).toHaveLength(2);
       expect(loaded?.workflowEdges.filter((edge) => edge.kind === "script")).toHaveLength(2);
 

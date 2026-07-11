@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -20,13 +19,10 @@ import { findProjectAsset } from "../../src/lib/projectAssets";
 import type { MediaAsset, Project, WorkflowEdge } from "../../src/types/domain";
 import { workflowEdgeSchema } from "../schemas";
 import { AssetStorageService } from "../services/AssetStorageService";
-import type { AuthUserRecord } from "../services/AuthService";
-import { canAccessProject } from "../services/AccessControl";
 import { invalidateVideoOutputsForChangedSeedanceScript } from "../services/ProjectVideoInvalidation";
 import { MediaPipelineService } from "../services/MediaPipelineService";
 import type { ProjectStore } from "../services/ProjectStore";
 import { createWorkflowEdgeId } from "../services/WorkflowEdges";
-import { CurrentUser } from "./auth.decorators";
 import { PROJECT_STORE } from "./tokens";
 
 @Controller("api/projects")
@@ -40,41 +36,38 @@ export class ProjectsController {
   ) {}
 
   @Get()
-  async list(@CurrentUser() user: AuthUserRecord) {
-    const summaries = await this.store.listSummaries();
-    if (user.role === "admin") return summaries;
-    return summaries.filter((project) => project.ownerUserId === user.id);
+  async list() {
+    return this.store.listSummaries();
   }
 
   @Post()
-  async create(@CurrentUser() user: AuthUserRecord, @Body() body: Partial<Project>) {
+  async create(@Body() body: Partial<Project>) {
     const project = createDemoProject({
       title: body.title || undefined,
       inspiration: body.inspiration || undefined
     });
-    return this.store.save({ ...project, ownerUserId: user.id });
+    return this.store.save(project);
   }
 
   @Get(":id/generation-jobs")
-  async generationJobs(@CurrentUser() user: AuthUserRecord, @Param("id") id: string) {
-    await this.requireProject(id, user);
+  async generationJobs(@Param("id") id: string) {
+    await this.requireProject(id);
     return this.store.listGenerationJobs(id);
   }
 
   @Get(":id/workflow-edges")
-  async workflowEdges(@CurrentUser() user: AuthUserRecord, @Param("id") id: string) {
-    await this.requireProject(id, user);
+  async workflowEdges(@Param("id") id: string) {
+    await this.requireProject(id);
     return this.store.listWorkflowEdges(id);
   }
 
   @Get(":id/assets/:assetId/download")
   async downloadAsset(
-    @CurrentUser() user: AuthUserRecord,
     @Param("id") id: string,
     @Param("assetId") assetId: string,
     @Res() res: Response
   ) {
-    const project = await this.requireProject(id, user);
+    const project = await this.requireProject(id);
     const asset = findProjectAsset(project, assetId);
     if (!asset?.url) throw new NotFoundException("Asset not found");
 
@@ -88,12 +81,11 @@ export class ProjectsController {
 
   @Get(":id/assets/:assetId/file")
   async viewAsset(
-    @CurrentUser() user: AuthUserRecord,
     @Param("id") id: string,
     @Param("assetId") assetId: string,
     @Res() res: Response
   ) {
-    const project = await this.requireProject(id, user);
+    const project = await this.requireProject(id);
     const asset = findProjectAsset(project, assetId);
     if (!asset?.url) throw new NotFoundException("Asset not found");
 
@@ -105,14 +97,14 @@ export class ProjectsController {
   }
 
   @Get(":id")
-  async get(@CurrentUser() user: AuthUserRecord, @Param("id") id: string) {
-    const project = await this.requireProject(id, user);
+  async get(@Param("id") id: string) {
+    const project = await this.requireProject(id);
     return this.media.refreshPendingVideoJobs(project.id);
   }
 
   @Post(":id/workflow-edges")
-  async createWorkflowEdge(@CurrentUser() user: AuthUserRecord, @Param("id") id: string, @Body() body: unknown) {
-    const project = await this.requireProject(id, user);
+  async createWorkflowEdge(@Param("id") id: string, @Body() body: unknown) {
+    const project = await this.requireProject(id);
     const input = workflowEdgeSchema.parse(body);
     const missingReference = validateWorkflowEdgeReferences(project, input);
     if (missingReference) throw new BadRequestException(missingReference);
@@ -127,15 +119,15 @@ export class ProjectsController {
 
   @Delete(":id/workflow-edges/:edgeId")
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteWorkflowEdge(@CurrentUser() user: AuthUserRecord, @Param("id") id: string, @Param("edgeId") edgeId: string) {
-    await this.requireProject(id, user);
+  async deleteWorkflowEdge(@Param("id") id: string, @Param("edgeId") edgeId: string) {
+    await this.requireProject(id);
     const deleted = await this.store.deleteWorkflowEdge(id, edgeId);
     if (!deleted) throw new NotFoundException("Workflow edge not found");
   }
 
   @Delete(":id/assets/:assetId")
-  async deleteAsset(@CurrentUser() user: AuthUserRecord, @Param("id") id: string, @Param("assetId") assetId: string) {
-    const project = await this.requireProject(id, user);
+  async deleteAsset(@Param("id") id: string, @Param("assetId") assetId: string) {
+    const project = await this.requireProject(id);
     const asset = findProjectAsset(project, assetId);
     if (!asset) throw new NotFoundException("Asset not found");
 
@@ -146,17 +138,16 @@ export class ProjectsController {
   }
 
   @Put(":id")
-  async save(@CurrentUser() user: AuthUserRecord, @Param("id") id: string, @Body() project: Project) {
+  async save(@Param("id") id: string, @Body() project: Project) {
     if (project.id !== id) throw new BadRequestException("Project id mismatch");
-    const existing = await this.requireProject(id, user);
-    const ownerUserId = user.role === "admin" ? project.ownerUserId || existing.ownerUserId : user.id;
-    const sanitizedProject = invalidateVideoOutputsForChangedSeedanceScript({ ...project, ownerUserId }, existing);
+    const existing = await this.requireProject(id);
+    const sanitizedProject = invalidateVideoOutputsForChangedSeedanceScript(project, existing);
     return this.store.save(sanitizedProject);
   }
 
   @Post(":id/export")
-  async export(@CurrentUser() user: AuthUserRecord, @Param("id") id: string) {
-    const project = await this.requireProject(id, user);
+  async export(@Param("id") id: string) {
+    const project = await this.requireProject(id);
     return {
       exportedAt: new Date().toISOString(),
       projectId: project.id,
@@ -166,10 +157,9 @@ export class ProjectsController {
     };
   }
 
-  private async requireProject(id: string, user: AuthUserRecord): Promise<Project> {
+  private async requireProject(id: string): Promise<Project> {
     const project = await this.store.get(id);
     if (!project) throw new NotFoundException("Project not found");
-    if (!canAccessProject(user, project)) throw new ForbiddenException("Project is not available for this account");
     return project;
   }
 }

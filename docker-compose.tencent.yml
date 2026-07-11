@@ -3,9 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_RECHARGE_WECHAT_QR_URL: ${NEXT_PUBLIC_RECHARGE_WECHAT_QR_URL:-}
-        NEXT_PUBLIC_RECHARGE_ALIPAY_QR_URL: ${NEXT_PUBLIC_RECHARGE_ALIPAY_QR_URL:-}
     image: ai-comic-workbench:prod
     restart: unless-stopped
     env_file:

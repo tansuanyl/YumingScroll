@@ -18,8 +18,6 @@ type TextCreationProps = {
   onProjectChange: (project: Project) => void;
   onSave: (project: Project, message?: string) => Promise<void>;
   onAssistantMessage: (message: string) => void;
-  generationCostLabel: string;
-  onBillingChange: () => void;
 };
 
 const QUICK_GENERATION_RECOVERY_MS = 6_000;
@@ -69,9 +67,7 @@ export function TextCreation({
   project,
   onProjectChange,
   onSave,
-  onAssistantMessage,
-  generationCostLabel,
-  onBillingChange
+  onAssistantMessage
 }: TextCreationProps) {
   const [draft, setDraft] = useState(project);
   const [busy, setBusy] = useState(false);
@@ -356,7 +352,6 @@ export function TextCreation({
       if (recovered) return;
       await showGenerationFailure(generatingDraft, generationRequestId, errorMessage);
     } finally {
-      void onBillingChange();
       finishGeneration(generationRequestId);
     }
   }
@@ -416,7 +411,6 @@ export function TextCreation({
       if (recovered) return;
       await showGenerationFailure(generatingDraft, generationRequestId, errorMessage);
     } finally {
-      void onBillingChange();
       finishGeneration(generationRequestId);
     }
   }
@@ -644,8 +638,8 @@ export function TextCreation({
               {busy
                 ? "取消生成"
                 : mode === "brief"
-                  ? `生成 Seedance 分镜脚本 · ${generationCostLabel}`
-                  : `用小说生成分镜脚本 · ${generationCostLabel}`}
+                  ? "生成 Seedance 分镜脚本"
+                  : "用小说生成分镜脚本"}
             </button>
           </div>
           {busy && generationStartedAt ? (

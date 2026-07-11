@@ -7,7 +7,7 @@ import { JsonErrorFilter } from "./nest/http-error.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
-  app.enableCors({ origin: env.WEB_ORIGIN, credentials: true });
+  app.enableCors({ origin: env.WEB_ORIGIN });
   app.use(express.json({ limit: "10mb" }));
   app.useGlobalFilters(new JsonErrorFilter());
 

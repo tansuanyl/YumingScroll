@@ -51,11 +51,6 @@ set_env() {
   mv "$tmp_file" .env.cvm
 }
 
-if [ -n "${AUTH_BOOTSTRAP_PASSWORD_B64:-}" ]; then
-  set_env AUTH_BOOTSTRAP_PASSWORD_B64 "$AUTH_BOOTSTRAP_PASSWORD_B64"
-  set_env AUTH_BOOTSTRAP_SYNC_PASSWORD "true"
-fi
-
 primary_domain="${CVM_PRIMARY_DOMAIN:-}"
 alternate_domain="${CVM_ALTERNATE_DOMAIN:-}"
 if [ -n "$primary_domain" ] && [ -z "$alternate_domain" ]; then

@@ -8,7 +8,6 @@ datasource db {
 
 model Project {
   id                 String           @id
-  ownerUserId        String?
   title              String
   inspiration        String
   status             String
@@ -25,130 +24,6 @@ model Project {
   sceneModelRows     SceneModel[]
   videoFlowRows      VideoFlow[]
   workflowEdgeRows   WorkflowEdge[]
-  ownerUser          AppUser?         @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  usageLogs          UsageLog[]
-
-  @@index([ownerUserId])
-}
-
-model AppUser {
-  id                         String        @id
-  username                   String        @unique
-  email                      String?       @unique
-  emailVerifiedAt            DateTime?
-  emailVerificationTokenHash String?       @unique
-  emailVerificationExpiresAt DateTime?
-  emailVerificationSentAt    DateTime?
-  displayName                String?
-  passwordHash               String
-  role                       String
-  status                     String        @default("active")
-  billingMode                String        @default("free")
-  coinBalance                Int           @default(0)
-  note                       String?
-  lastLoginAt                DateTime?
-  createdAt                  DateTime      @default(now())
-  updatedAt                  DateTime      @updatedAt
-  projects                   Project[]
-  sessions                   AuthSession[]
-  usageLogs                  UsageLog[]
-  coinLedgers                CoinLedger[]
-  rechargeRequests           RechargeRequest[]
-  passwordResetRequests      PasswordResetRequest[]
-
-  @@index([role])
-  @@index([status])
-  @@index([billingMode])
-  @@index([emailVerifiedAt])
-}
-
-model CoinLedger {
-  id           String   @id
-  userId       String
-  delta        Int
-  balanceAfter Int
-  type         String
-  action       String?
-  projectId    String?
-  metadata     Json?
-  createdAt    DateTime @default(now())
-
-  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([type])
-  @@index([createdAt])
-}
-
-model RechargeRequest {
-  id               String    @id
-  userId           String
-  paymentMethod    String
-  amountCny        Int
-  coins            Int
-  status           String    @default("pending")
-  note             String?
-  reviewedByUserId String?
-  reviewedAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-model PasswordResetRequest {
-  id               String    @id
-  userId           String
-  contact          String?
-  status           String    @default("pending")
-  reviewedByUserId String?
-  reviewedAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-model AuthSession {
-  id        String    @id
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  user AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-model UsageLog {
-  id        String   @id
-  userId    String?
-  projectId String?
-  action    String
-  model     String?
-  status    String
-  metadata  Json?
-  createdAt DateTime @default(now())
-
-  user    AppUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
-  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([projectId])
-  @@index([action])
-  @@index([createdAt])
 }
 
 model MediaAsset {

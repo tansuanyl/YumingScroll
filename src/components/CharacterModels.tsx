@@ -14,17 +14,13 @@ type CharacterModelsProps = {
   onProjectChange: (project: Project) => void;
   onSave: (project: Project, message?: string) => Promise<void>;
   onAssistantMessage: (message: string) => void;
-  generationCostLabel: string;
-  onBillingChange: () => void;
 };
 
 export function CharacterModels({
   project,
   onProjectChange,
   onSave,
-  onAssistantMessage,
-  generationCostLabel,
-  onBillingChange
+  onAssistantMessage
 }: CharacterModelsProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [progressById, setProgressById] = useState<Record<string, number>>({});
@@ -103,7 +99,6 @@ export function CharacterModels({
       });
       onAssistantMessage(error instanceof Error ? error.message : "人物图生成失败");
     } finally {
-      void onBillingChange();
       if (generationControllers.current[characterModelId] === controller) {
         delete generationControllers.current[characterModelId];
         delete generationRequestIds.current[characterModelId];
@@ -192,7 +187,6 @@ export function CharacterModels({
             isLoading={busyId === model.id}
             loadingProgress={progressById[model.id] || 0}
             error={model.error}
-            generationCostLabel={generationCostLabel}
             getDownloadUrl={(asset) => apiClient.assetDownloadUrl(project.id, asset.id)}
             onPromptChange={(value) => updatePrompt(model.id, value)}
             onPromptBlur={(value) => void savePrompt(model.id, value)}
