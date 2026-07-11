@@ -10,6 +10,26 @@
 
 项目当前处于早期开发阶段。真实生成需要部署者自己的模型服务账号，并可能产生第三方 API 费用。
 
+## 实机画面
+
+> 以下截图使用 Mock 演示数据，不包含真实 API Key 或用户数据。
+
+### 从一句想法开始
+
+![首页的 Provider 配置提醒与创作入口](./docs/screenshots/home-provider-setup.png)
+
+### 文本创作工作台
+
+![文本创作工作台中的输入模式、模型选择与故事结构](./docs/screenshots/text-creation-workbench.png)
+
+### 视频 Flow Map
+
+![Flow Map 中的人物、场景、分镜脚本与 15 秒视频节点](./docs/screenshots/video-flow-map.png)
+
+### Seedance 2.0 分镜脚本
+
+![当前 15 秒片段的镜头、运镜、台词、音效与光影设定](./docs/screenshots/storyboard-script-detail.png)
+
 ## 功能
 
 - 从一句灵感或导入的小说/文档生成世界观、人物、剧情大纲和分镜
