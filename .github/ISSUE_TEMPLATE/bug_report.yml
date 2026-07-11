@@ -1,0 +1,64 @@
+name: Bug report
+description: 报告可复现的功能问题
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: 请勿在公开 Issue 中填写 API key、用户数据或未修复漏洞细节。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 实际发生了什么？你原本期待什么？
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开...
+        2. 点击...
+        3. 观察到...
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: 版本或提交
+      placeholder: commit SHA、分支或版本号
+    validations:
+      required: true
+  - type: dropdown
+    id: storage
+    attributes:
+      label: 项目存储
+      options:
+        - Local JSON
+        - PostgreSQL
+        - 不确定
+    validations:
+      required: true
+  - type: dropdown
+    id: providers
+    attributes:
+      label: Provider 模式
+      options:
+        - Mock
+        - Real provider
+        - Mixed
+        - 不确定
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 已脱敏日志或截图
+      description: 删除密钥、Cookie、邮箱、项目内容和存储 URL 后再提交。
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交确认
+      options:
+        - label: 我确认该 Issue 不包含密钥、私人数据或可直接利用的安全漏洞细节。
+          required: true

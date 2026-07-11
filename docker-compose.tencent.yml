@@ -1,0 +1,31 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_RECHARGE_WECHAT_QR_URL: ${NEXT_PUBLIC_RECHARGE_WECHAT_QR_URL:-}
+        NEXT_PUBLIC_RECHARGE_ALIPAY_QR_URL: ${NEXT_PUBLIC_RECHARGE_ALIPAY_QR_URL:-}
+    image: ai-comic-workbench:prod
+    restart: unless-stopped
+    env_file:
+      - .env.tencent
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+    command: sh -c "npx prisma migrate deploy && npx tsx server/main.ts"
+    ports:
+      - "8787:8787"
+
+  web:
+    image: ai-comic-workbench:prod
+    restart: unless-stopped
+    depends_on:
+      - api
+    env_file:
+      - .env.tencent
+    environment:
+      API_PROXY_TARGET: http://api:8787
+    command: npx next start -H 0.0.0.0 -p 5173
+    ports:
+      - "80:5173"

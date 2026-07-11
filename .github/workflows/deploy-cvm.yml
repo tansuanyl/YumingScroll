@@ -1,0 +1,162 @@
+name: Deploy to Tencent CVM
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cvm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validate
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run db:generate
+          npm test
+          npm run build
+
+      - name: Build release archive
+        run: |
+          set -euo pipefail
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='dist' \
+            --exclude='logs' \
+            --exclude='reports' \
+            --exclude='.env' \
+            --exclude='.env.local' \
+            --exclude='.env.development' \
+            --exclude='.env.production' \
+            --exclude='.env.cvm' \
+            --exclude='.env.tencent' \
+            --exclude='server/storage/media' \
+            --exclude='server/storage/projects.json' \
+            -czf /tmp/ai-comic-workbench-release.tar.gz .
+
+      - name: Prepare SSH
+        env:
+          CVM_SSH_KEY: ${{ secrets.CVM_SSH_KEY }}
+          CVM_HOST: ${{ secrets.CVM_HOST }}
+          CVM_PORT: ${{ secrets.CVM_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          test -n "$CVM_SSH_KEY"
+          test -n "$CVM_HOST"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$CVM_SSH_KEY" > ~/.ssh/cvm_deploy_key
+          chmod 600 ~/.ssh/cvm_deploy_key
+          ssh-keyscan -p "$CVM_PORT" "$CVM_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload release archive
+        env:
+          CVM_HOST: ${{ secrets.CVM_HOST }}
+          CVM_USER: ${{ secrets.CVM_USER || 'ubuntu' }}
+          CVM_PORT: ${{ secrets.CVM_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          REMOTE_RELEASE="/home/$CVM_USER/ai-comic-workbench-release-${GITHUB_RUN_ID}.tar.gz"
+          REMOTE_SCRIPT="/home/$CVM_USER/deploy-cvm-remote-${GITHUB_RUN_ID}.sh"
+          ssh \
+            -T \
+            -o BatchMode=yes \
+            -p "$CVM_PORT" \
+            -i ~/.ssh/cvm_deploy_key \
+            "$CVM_USER@$CVM_HOST" \
+            "rm -f '$REMOTE_RELEASE' '$REMOTE_SCRIPT'"
+          scp -P "$CVM_PORT" -i ~/.ssh/cvm_deploy_key /tmp/ai-comic-workbench-release.tar.gz \
+            "$CVM_USER@$CVM_HOST:$REMOTE_RELEASE"
+          scp -P "$CVM_PORT" -i ~/.ssh/cvm_deploy_key scripts/deploy-cvm-remote.sh \
+            "$CVM_USER@$CVM_HOST:$REMOTE_SCRIPT"
+
+      - name: Deploy on CVM
+        env:
+          CVM_HOST: ${{ secrets.CVM_HOST }}
+          CVM_USER: ${{ secrets.CVM_USER || 'ubuntu' }}
+          CVM_PORT: ${{ secrets.CVM_PORT || '22' }}
+          AUTH_BOOTSTRAP_PASSWORD: ${{ secrets.AUTH_BOOTSTRAP_PASSWORD }}
+          CVM_PRIMARY_DOMAIN: ${{ vars.CVM_PRIMARY_DOMAIN }}
+          CVM_ALTERNATE_DOMAIN: ${{ vars.CVM_ALTERNATE_DOMAIN }}
+        run: |
+          set -euo pipefail
+          REMOTE_RELEASE="/home/$CVM_USER/ai-comic-workbench-release-${GITHUB_RUN_ID}.tar.gz"
+          REMOTE_SCRIPT="/home/$CVM_USER/deploy-cvm-remote-${GITHUB_RUN_ID}.sh"
+          AUTH_BOOTSTRAP_PASSWORD_B64=""
+          if [ -n "${AUTH_BOOTSTRAP_PASSWORD:-}" ]; then
+            AUTH_BOOTSTRAP_PASSWORD_B64="$(printf '%s' "$AUTH_BOOTSTRAP_PASSWORD" | base64 -w 0)"
+          fi
+          ssh \
+            -T \
+            -o BatchMode=yes \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=8 \
+            -p "$CVM_PORT" \
+            -i ~/.ssh/cvm_deploy_key \
+            "$CVM_USER@$CVM_HOST" \
+            "AUTH_BOOTSTRAP_PASSWORD_B64='$AUTH_BOOTSTRAP_PASSWORD_B64' CVM_PRIMARY_DOMAIN='$CVM_PRIMARY_DOMAIN' CVM_ALTERNATE_DOMAIN='$CVM_ALTERNATE_DOMAIN' RELEASE_PATH='$REMOTE_RELEASE' bash '$REMOTE_SCRIPT'"
+
+      - name: Verify bootstrap admin login
+        env:
+          CVM_HOST: ${{ secrets.CVM_HOST }}
+          CVM_USER: ${{ secrets.CVM_USER || 'ubuntu' }}
+          CVM_PORT: ${{ secrets.CVM_PORT || '22' }}
+          AUTH_BOOTSTRAP_PASSWORD: ${{ secrets.AUTH_BOOTSTRAP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          AUTH_BOOTSTRAP_PASSWORD_B64=""
+          if [ -n "${AUTH_BOOTSTRAP_PASSWORD:-}" ]; then
+            AUTH_BOOTSTRAP_PASSWORD_B64="$(printf '%s' "$AUTH_BOOTSTRAP_PASSWORD" | base64 -w 0)"
+          fi
+          ssh \
+            -T \
+            -o BatchMode=yes \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=8 \
+            -p "$CVM_PORT" \
+            -i ~/.ssh/cvm_deploy_key \
+            "$CVM_USER@$CVM_HOST" \
+            "AUTH_BOOTSTRAP_PASSWORD_B64='$AUTH_BOOTSTRAP_PASSWORD_B64' bash -s" <<'REMOTE'
+          set -euo pipefail
+          if [ -z "${AUTH_BOOTSTRAP_PASSWORD_B64:-}" ]; then
+            echo "bootstrap-admin-login-skip=no-secret"
+            exit 0
+          fi
+          remote_dir="$HOME/ai-comic-workbench"
+          docker compose --project-directory "$remote_dir" -f "$remote_dir/docker-compose.cvm.yml" \
+            exec -T -e AUTH_BOOTSTRAP_PASSWORD_B64 api node --input-type=module <<'NODE'
+          const password = Buffer.from(process.env.AUTH_BOOTSTRAP_PASSWORD_B64 || "", "base64").toString("utf8");
+          const response = await fetch("http://127.0.0.1:8787/api/auth/login", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ username: "admin", password })
+          });
+          console.log(`bootstrap-admin-login-status=${response.status}`);
+          if (!response.ok) {
+            console.error(`bootstrap-admin-login-failed=${await response.text()}`);
+            process.exit(1);
+          }
+          console.log("bootstrap-admin-login-ok");
+          NODE
+          REMOTE

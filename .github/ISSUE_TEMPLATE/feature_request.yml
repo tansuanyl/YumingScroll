@@ -1,0 +1,29 @@
+name: Feature request
+description: 建议新的工作流、Provider 或创作能力
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: 使用场景
+      description: 谁在什么创作流程中遇到了什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 描述期望的交互、输入、输出和边界。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 已考虑的替代方案
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: 范围确认
+      options:
+        - label: 该建议不依赖无法公开或无法再许可的客户素材。
+          required: true

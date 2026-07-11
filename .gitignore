@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.vite/
+.next/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.development.example
+!.env.production.example
+!.env.cvm.example
+!.env.tencent.example
+
+# Runtime data
+server/storage/*.json
+server/storage/media/
+!server/storage/.gitkeep
+
+# Logs
+*.log
+*.err.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test and coverage output
+coverage/
+reports/
+docs/client_pitch_previews/
+docs/client_pitch_previews_v2/
+docs/client_pitch_screenshots_v2/
+docs/*.pptx
+docs/*.pdf
+
+# Local editor / OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Codex / local planning artifacts
+.superpowers/
+PROJECT_MEMORY.md
