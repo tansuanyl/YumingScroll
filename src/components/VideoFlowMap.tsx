@@ -50,6 +50,8 @@ import type {
   WorkflowEdge
 } from "../types/domain";
 import { AIImageGenerationPanel } from "./ui/ai-gen";
+import { useI18n } from "../i18n/I18nProvider";
+import type { TranslationValues } from "../i18n/messages";
 
 type VideoFlowMapProps = {
   project: Project;
@@ -244,6 +246,7 @@ export function VideoFlowMap({
   onSave,
   onAssistantMessage
 }: VideoFlowMapProps) {
+  const { t, formatDateTime } = useI18n();
   const [flowId, setFlowId] = useState(project.videoFlows[0]?.id || "");
   const [nodePositions, setNodePositions] = useState<Record<string, NodePosition>>(() => collectPersistedNodePositions(project));
   const [inputPortCenters, setInputPortCenters] = useState<Record<string, NodePosition>>({});
@@ -427,7 +430,7 @@ export function VideoFlowMap({
   }, [boardHeight, boardWidth, layoutSignature, nodePositions, workflowZoom]);
 
   if (!flow) {
-    return <div className="empty-state">当前项目还没有可用 Flow。</div>;
+    return <div className="empty-state">{t("当前项目还没有可用 Flow。")}</div>;
   }
 
   function withUpdatedFlow(sourceProject: Project, targetFlowId: string, update: (targetFlow: VideoFlow) => VideoFlow): Project {
@@ -727,7 +730,7 @@ export function VideoFlowMap({
       const savedProject = await apiClient.saveProject(nextProject);
       applyProject(savedProject);
     } catch (error) {
-      onAssistantMessage(error instanceof Error ? error.message : "保存 Flow Map 框体位置失败");
+      onAssistantMessage(t(error instanceof Error ? error.message : "保存 Flow Map 框体位置失败"));
     }
   }
 
@@ -808,7 +811,10 @@ export function VideoFlowMap({
     const inputKind = input?.inputKind;
     if (!toFlowId || !inputKind) return;
     if (inputKind !== expectedInputKind) {
-      onAssistantMessage(`${sourceMeta[drag.sourceKind].label}只能连接到${inputLabels[expectedInputKind]}输入口。`);
+      onAssistantMessage(t("{source}只能连接到{input}输入口。", {
+        source: t(sourceMeta[drag.sourceKind].label),
+        input: t(inputLabels[expectedInputKind])
+      }));
       return;
     }
     void connectWorkflowNode(drag, toFlowId, inputKind);
@@ -875,7 +881,7 @@ export function VideoFlowMap({
       inputKind
     });
     if (edgeInputs.length === 0) {
-      onAssistantMessage(`${sourceMeta[source.sourceKind].label}节点还没有可复用的内容。`);
+      onAssistantMessage(t("{source}节点还没有可复用的内容。", { source: t(sourceMeta[source.sourceKind].label) }));
       return;
     }
 
@@ -902,7 +908,7 @@ export function VideoFlowMap({
     );
     applyProject(optimisticProject);
     setFlowId(toFlowId);
-    onAssistantMessage(`${sourceMeta[source.sourceKind].label} 已连接，正在后台保存。`);
+    onAssistantMessage(t("{source} 已连接，正在后台保存。", { source: t(sourceMeta[source.sourceKind].label) }));
 
     try {
       await Promise.all(edgeInputs.map((edge) => apiClient.createWorkflowEdge(currentProject.id, edge)));
@@ -919,12 +925,12 @@ export function VideoFlowMap({
         applyProject(savedProject);
         setFlowId(toFlowId);
       }
-      onAssistantMessage(`${sourceMeta[source.sourceKind].label} 已连接到目标片段。`);
+      onAssistantMessage(t("{source} 已连接到目标片段。", { source: t(sourceMeta[source.sourceKind].label) }));
     } catch (error) {
       if (projectRef.current === optimisticProject) {
         applyProject(previousProject);
       }
-      onAssistantMessage(error instanceof Error ? error.message : "connect workflow node failed");
+      onAssistantMessage(t(error instanceof Error ? error.message : "连接 Flow Map 框体失败"));
     }
   }
 
@@ -940,7 +946,8 @@ export function VideoFlowMap({
     const nodeKey = getModelNodeKey(kind, id);
     const nextProject = createWorkflowModelSource(projectRef.current, kind, {
       id,
-      name: kind === "character" ? "新人物模型" : "新场景模型"
+      name: kind === "character" ? t("新人物模型") : t("新场景模型"),
+      description: kind === "character" ? t("手动新增的人物模型框体。") : t("手动新增的场景模型框体。")
     });
     if (nextProject === projectRef.current) return;
     const offset = {
@@ -957,9 +964,9 @@ export function VideoFlowMap({
     applyProject(positionedProject);
     setBusy(true);
     try {
-      await onSave(positionedProject, kind === "character" ? "人物模型框体已新增。" : "场景模型框体已新增。");
+      await onSave(positionedProject, kind === "character" ? t("人物模型框体已新增。") : t("场景模型框体已新增。"));
     } catch (error) {
-      onAssistantMessage(error instanceof Error ? error.message : "create workflow model failed");
+      onAssistantMessage(t(error instanceof Error ? error.message : "新增模型框体失败"));
     } finally {
       setBusy(false);
     }
@@ -967,7 +974,7 @@ export function VideoFlowMap({
 
   async function createManualVideoSegment(boardPoint: NodePosition) {
     const currentProject = projectRef.current;
-    const nextProject = createWorkflowVideoSegment(currentProject);
+    const nextProject = createWorkflowVideoSegment(currentProject, { title: t("新建 15s 视频片段") });
     if (nextProject === currentProject) return;
 
     const nextFlow = nextProject.videoFlows[nextProject.videoFlows.length - 1];
@@ -997,9 +1004,9 @@ export function VideoFlowMap({
       const savedFlow = savedProject.videoFlows.find((item) => item.id === nextFlow.id || item.shotId === nextFlow.shotId);
       applyProject(savedProject);
       setFlowId(savedFlow?.id || nextFlow.id);
-      onAssistantMessage("15s 视频片段框体已新增。");
+      onAssistantMessage(t("15s 视频片段框体已新增。"));
     } catch (error) {
-      onAssistantMessage(error instanceof Error ? error.message : "create workflow video segment failed");
+      onAssistantMessage(t(error instanceof Error ? error.message : "新增视频片段框体失败"));
     } finally {
       setBusy(false);
     }
@@ -1020,9 +1027,9 @@ export function VideoFlowMap({
     applyProject(nextProject);
     setBusy(true);
     try {
-      await onSave(nextProject, "模型名称已保存。");
+      await onSave(nextProject, t("模型名称已保存。"));
     } catch (error) {
-      onAssistantMessage(error instanceof Error ? error.message : "rename workflow model failed");
+      onAssistantMessage(t(error instanceof Error ? error.message : "保存模型名称失败"));
     } finally {
       setBusy(false);
     }
@@ -1038,10 +1045,10 @@ export function VideoFlowMap({
     setBusy(true);
     try {
       await deletePersistedWorkflowEdges(edgeIds);
-      await onSave(nextProject, "模型与片段的连接已断开。");
+      await onSave(nextProject, t("模型与片段的连接已断开。"));
     } catch (error) {
       onProjectChange(currentProject);
-      onAssistantMessage(error instanceof Error ? error.message : "disconnect workflow model failed");
+      onAssistantMessage(t(error instanceof Error ? error.message : "断开模型连接失败"));
     } finally {
       setBusy(false);
     }
@@ -1062,10 +1069,10 @@ export function VideoFlowMap({
     setBusy(true);
     try {
       await deletePersistedWorkflowEdges(edgeIds);
-      await onSave(nextProject, `${sourceMeta[sourceKind].label}与片段的连接已断开。`);
+      await onSave(nextProject, t("{source}与片段的连接已断开。", { source: t(sourceMeta[sourceKind].label) }));
     } catch (error) {
       onProjectChange(currentProject);
-      onAssistantMessage(error instanceof Error ? error.message : "disconnect workflow segment source failed");
+      onAssistantMessage(t(error instanceof Error ? error.message : "断开片段连接失败"));
     } finally {
       setBusy(false);
     }
@@ -1088,7 +1095,7 @@ export function VideoFlowMap({
       ? currentProject.characterModels.find((item) => item.id === modelId)
       : currentProject.sceneModels.find((item) => item.id === modelId);
     if (!model) return;
-    if (!window.confirm(`删除“${model.name}”框体？相关 15 秒片段连接会一并断开。`)) return;
+    if (!window.confirm(t("删除“{name}”框体？相关 15 秒片段连接会一并断开。", { name: model.name }))) return;
 
     const nextProject = deleteWorkflowModelSource(currentProject, kind, modelId);
     if (nextProject === currentProject) return;
@@ -1109,9 +1116,9 @@ export function VideoFlowMap({
     applyProject(nextProject);
     setBusy(true);
     try {
-      await onSave(nextProject, kind === "character" ? "人物模型框体已删除。" : "场景模型框体已删除。");
+      await onSave(nextProject, kind === "character" ? t("人物模型框体已删除。") : t("场景模型框体已删除。"));
     } catch (error) {
-      onAssistantMessage(error instanceof Error ? error.message : "delete workflow model failed");
+      onAssistantMessage(t(error instanceof Error ? error.message : "删除模型框体失败"));
     } finally {
       setBusy(false);
     }
@@ -1162,18 +1169,18 @@ export function VideoFlowMap({
           onClick={(event) => event.stopPropagation()}
           onContextMenu={(event) => event.preventDefault()}
         >
-          <span className="workflow-context-menu-title">新增框体</span>
+          <span className="workflow-context-menu-title">{t("新增框体")}</span>
           <button type="button" role="menuitem" onClick={() => void createManualModelSource("character", { x: contextMenu.boardX, y: contextMenu.boardY })}>
             <Plus size={15} />
-            新建人物模型框体
+            {t("新建人物模型框体")}
           </button>
           <button type="button" role="menuitem" onClick={() => void createManualModelSource("scene", { x: contextMenu.boardX, y: contextMenu.boardY })}>
             <Plus size={15} />
-            新建场景模型框体
+            {t("新建场景模型框体")}
           </button>
           <button type="button" role="menuitem" onClick={() => void createManualVideoSegment({ x: contextMenu.boardX, y: contextMenu.boardY })}>
             <Video size={15} />
-            新建 15s 视频片段框体
+            {t("新建 15s 视频片段框体")}
           </button>
         </div>
       );
@@ -1183,7 +1190,9 @@ export function VideoFlowMap({
       const sourceFlow = project.videoFlows.find((item) => item.id === contextMenu.flowId);
       const sourceIndex = project.videoFlows.findIndex((item) => item.id === contextMenu.flowId);
       const meta = sourceMeta[contextMenu.sourceKind];
-      const title = `${sourceIndex >= 0 ? `第 ${sourceIndex + 1} 段 ` : ""}${meta.label}`;
+      const title = sourceIndex >= 0
+        ? t("第 {index} 段 {label}", { index: sourceIndex + 1, label: t(meta.label) })
+        : t(meta.label);
       const linkedConnections = connections.filter(
         (connection) => connection.sourceKind === contextMenu.sourceKind && connection.fromFlowId === contextMenu.flowId
       );
@@ -1207,12 +1216,14 @@ export function VideoFlowMap({
             }}
           >
             <Pencil size={15} />
-            打开{meta.label}
+            {t("打开{label}", { label: t(meta.label) })}
           </button>
           {linkedConnections.length > 0 ? (
             linkedConnections.map((connection) => {
               const targetIndex = project.videoFlows.findIndex((item) => item.id === connection.toFlowId);
-              const segmentLabel = targetIndex >= 0 ? `断开第 ${targetIndex + 1} 段 15s 视频连接` : "断开 15s 视频连接";
+              const segmentLabel = targetIndex >= 0
+                ? t("断开第 {index} 段 15s 视频连接", { index: targetIndex + 1 })
+                : t("断开 15s 视频连接");
               return (
                 <button
                   type="button"
@@ -1233,9 +1244,9 @@ export function VideoFlowMap({
               );
             })
           ) : (
-            <span className="workflow-context-menu-empty">暂无 15s 视频连接</span>
+            <span className="workflow-context-menu-empty">{t("暂无 15s 视频连接")}</span>
           )}
-          {!sourceFlow ? <span className="workflow-context-menu-empty">源片段已不存在</span> : null}
+          {!sourceFlow ? <span className="workflow-context-menu-empty">{t("源片段已不存在")}</span> : null}
         </div>
       );
     }
@@ -1255,7 +1266,7 @@ export function VideoFlowMap({
         onClick={(event) => event.stopPropagation()}
         onContextMenu={(event) => event.preventDefault()}
       >
-        <span className="workflow-context-menu-title">{model?.name || "模型框体"}</span>
+        <span className="workflow-context-menu-title">{model?.name || t("模型框体")}</span>
         <button
           type="button"
           role="menuitem"
@@ -1265,12 +1276,12 @@ export function VideoFlowMap({
           }}
         >
           <Pencil size={15} />
-          打开模型详情
+          {t("打开模型详情")}
         </button>
         {linkedConnections.length > 0 ? (
           linkedConnections.map((connection) => {
             const index = project.videoFlows.findIndex((item) => item.id === connection.toFlowId);
-            const segmentLabel = index >= 0 ? `断开第 ${index + 1} 段 15s` : "断开片段连接";
+            const segmentLabel = index >= 0 ? t("断开第 {index} 段 15s", { index: index + 1 }) : t("断开片段连接");
             return (
               <button
                 type="button"
@@ -1291,7 +1302,7 @@ export function VideoFlowMap({
             );
           })
         ) : (
-          <span className="workflow-context-menu-empty">暂无片段连接</span>
+          <span className="workflow-context-menu-empty">{t("暂无片段连接")}</span>
         )}
         <button
           className="danger"
@@ -1300,7 +1311,7 @@ export function VideoFlowMap({
           onClick={() => void deleteModelSource(contextMenu.modelKind, contextMenu.modelId)}
         >
           <Trash2 size={15} />
-          删除框体
+          {t("删除框体")}
         </button>
       </div>
     );
@@ -1338,19 +1349,19 @@ export function VideoFlowMap({
   }
 
   async function persistCurrent() {
-    await onSave(project, "Flow Map 参数已保存。");
+    await onSave(project, t("Flow Map 参数已保存。"));
   }
 
   async function copyImagePromptText(text: string, label: string) {
     if (!text.trim()) {
-      onAssistantMessage(`${label}暂无可复制内容。`);
+      onAssistantMessage(t("{label}暂无可复制内容。", { label }));
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      onAssistantMessage(`${label}已复制。`);
+      onAssistantMessage(t("{label}已复制。", { label }));
     } catch {
-      onAssistantMessage("复制失败，请手动选中文本复制。");
+      onAssistantMessage(t("复制失败，请手动选中文本复制。"));
     }
   }
 
@@ -1428,7 +1439,7 @@ export function VideoFlowMap({
 
   async function generateVideo() {
     if (selectedCharacterModelIds.length === 0 || selectedSceneModelIds.length === 0) {
-      const error = "请先至少选择一个人物模型和一个场景模型。";
+      const error = t("请先至少选择一个人物模型和一个场景模型。");
       onProjectChange(markVideoFailed(project, flow.id, error));
       onAssistantMessage(error);
       return;
@@ -1463,7 +1474,7 @@ export function VideoFlowMap({
       startVideoProgress(flow.id);
       applyProject(generatingProject);
       setBusy(true);
-      onAssistantMessage("Seedance 2.0 视频任务已开始，正在检查参考图并提交生成。");
+      onAssistantMessage(t("Seedance 2.0 视频任务已开始，正在检查参考图并提交生成。"));
       const syncedProject = await apiClient.saveProject(generatingProject);
       if (controller.signal.aborted) return;
       applyProject(syncedProject);
@@ -1507,16 +1518,16 @@ export function VideoFlowMap({
       const nextFlow = next.videoFlows.find((item) => item.id === flow.id);
       if (nextFlow?.status === "ready") {
         await finishVideoProgress(flow.id);
-        onAssistantMessage("15 秒视频任务已完成。Mock 模式会显示占位预览，真实模式会显示 Provider 返回素材。");
+        onAssistantMessage(t("15 秒视频任务已完成。Mock 模式会显示占位预览，真实模式会显示 Provider 返回素材。"));
       } else if (nextFlow?.status === "failed") {
         stopVideoProgress(flow.id);
-        onAssistantMessage(nextFlow.error || nextFlow.nodes.videoNode.error || "视频生成失败");
+        onAssistantMessage(nextFlow.error || nextFlow.nodes.videoNode.error || t("视频生成失败"));
       } else {
         holdVideoProgress(flow.id);
         if (nextFlow?.pendingVideoJobId) {
           void pollPendingVideoJob(flow.id, nextFlow.pendingVideoJobId, project.id);
         }
-        onAssistantMessage("Seedance 2.0 视频任务已提交，正在等待最终视频 URL。");
+        onAssistantMessage(t("Seedance 2.0 视频任务已提交，正在等待最终视频 URL。"));
       }
     } catch (error) {
       if (controller?.signal.aborted) return;
@@ -1528,27 +1539,27 @@ export function VideoFlowMap({
           const recoveredFlow = recoveredProject.videoFlows.find((item) => item.id === flow.id);
           if (recoveredFlow?.status === "ready") {
             await finishVideoProgress(flow.id);
-            onAssistantMessage("视频生成请求连接中断过一次，但后端已完成并回填结果。");
+            onAssistantMessage(t("视频生成请求连接中断过一次，但后端已完成并回填结果。"));
             return;
           }
           if (recoveredFlow?.status === "failed") {
             stopVideoProgress(flow.id);
-            onAssistantMessage(recoveredFlow.error || recoveredFlow.nodes.videoNode.error || "视频生成失败");
+            onAssistantMessage(recoveredFlow.error || recoveredFlow.nodes.videoNode.error || t("视频生成失败"));
             return;
           }
           holdVideoProgress(flow.id);
           if (recoveredFlow?.pendingVideoJobId) {
             void pollPendingVideoJob(flow.id, recoveredFlow.pendingVideoJobId, project.id);
           }
-          onAssistantMessage("视频生成请求连接中断过一次，但后端任务已提交，系统会继续等待最终视频 URL。");
+          onAssistantMessage(t("视频生成请求连接中断过一次，但后端任务已提交，系统会继续等待最终视频 URL。"));
           return;
         }
       }
 
       stopVideoProgress(flow.id);
       const message = isRecoverableVideoGenerationRequestError(error)
-        ? "视频生成请求连接中断，暂时无法确认后端任务状态。请稍后刷新项目，或重新点击生成。"
-        : error instanceof Error ? error.message : "视频生成失败";
+        ? t("视频生成请求连接中断，暂时无法确认后端任务状态。请稍后刷新项目，或重新点击生成。")
+        : t(error instanceof Error ? error.message : "视频生成失败");
       applyProject(markVideoFailed(projectRef.current, flow.id, message));
       onAssistantMessage(message);
     } finally {
@@ -1566,7 +1577,7 @@ export function VideoFlowMap({
     generationRequestId: string,
     signal?: AbortSignal
   ): Promise<Project | undefined> {
-    onAssistantMessage("视频生成请求连接中断，正在检查后端是否已经保存任务状态。");
+    onAssistantMessage(t("视频生成请求连接中断，正在检查后端是否已经保存任务状态。"));
     const deadline = Date.now() + videoGenerationRecoveryMs;
 
     while (!signal?.aborted && Date.now() < deadline) {
@@ -1606,7 +1617,7 @@ export function VideoFlowMap({
     } catch {
       // Keep local cancellation visible if persistence has a transient failure.
     }
-    onAssistantMessage("视频生成已取消。");
+    onAssistantMessage(t("视频生成已取消。"));
   }
 
   function startVideoProgress(targetFlowId: string) {
@@ -1651,7 +1662,7 @@ export function VideoFlowMap({
         if (!refreshed) {
           consecutiveErrors += 1;
           if (!quiet && consecutiveErrors === 3) {
-            onAssistantMessage("视频任务状态查询暂时不稳定，系统会继续自动轮询。");
+            onAssistantMessage(t("视频任务状态查询暂时不稳定，系统会继续自动轮询。"));
           }
           continue;
         }
@@ -1661,10 +1672,10 @@ export function VideoFlowMap({
         const refreshedFlow = refreshed.project.videoFlows.find((item) => item.id === targetFlowId);
         if (refreshed.jobStatus === "ready" || refreshedFlow?.status === "ready") {
           await finishVideoProgress(targetFlowId);
-          onAssistantMessage("Seedance 2.0 è§†é¢‘å·²ç”Ÿæˆå®Œæˆï¼Œé¢„è§ˆç´ æå·²å›žå¡«åˆ°å½“å‰ç‰‡æ®µã€‚");
+          onAssistantMessage(t("Seedance 2.0 视频已生成完成，预览素材已回填到当前片段。"));
         } else if (refreshed.jobStatus === "failed" || refreshedFlow?.status === "failed") {
           stopVideoProgress(targetFlowId);
-          onAssistantMessage(refreshedFlow?.error || refreshed.jobError || "视频生成失败");
+          onAssistantMessage(refreshedFlow?.error || refreshed.jobError || t("视频生成失败"));
         }
         if (
           refreshed.jobStatus === "ready" ||
@@ -1675,9 +1686,9 @@ export function VideoFlowMap({
           return;
         }
       }
-      onAssistantMessage("Seedance 2.0 视频任务仍在运行，系统会在页面停留期间持续自动刷新状态。");
+      onAssistantMessage(t("Seedance 2.0 视频任务仍在运行，系统会在页面停留期间持续自动刷新状态。"));
     } catch (error) {
-      onAssistantMessage(error instanceof Error ? error.message : "è§†é¢‘ä»»åŠ¡çŠ¶æ€æŸ¥è¯¢å¤±è´¥");
+      onAssistantMessage(t(error instanceof Error ? error.message : "视频任务状态查询失败"));
     } finally {
       pollingVideoJobs.current.delete(jobId);
     }
@@ -1758,7 +1769,7 @@ export function VideoFlowMap({
     startModelProgress(modelId);
     setModelBusyId(modelId);
     applyProject(clearedProject);
-    onAssistantMessage(`${targetModel.name} 人物模型图正在生成，一次返回 3 张候选图。`);
+    onAssistantMessage(t("{name} 人物模型图正在生成，一次返回 3 张候选图。", { name: targetModel.name }));
     try {
       const syncedProject = await apiClient.saveProject(clearedProject);
       if (controller.signal.aborted) return;
@@ -1770,11 +1781,11 @@ export function VideoFlowMap({
       if (controller.signal.aborted) return;
       applyProject(next);
       await finishModelProgress(modelId);
-      onAssistantMessage(`${targetModel.name} 人物模型候选图已生成。`);
+      onAssistantMessage(t("{name} 人物模型候选图已生成。", { name: targetModel.name }));
     } catch (error) {
       stopModelProgress(modelId);
       if (controller.signal.aborted) return;
-      const message = error instanceof Error ? error.message : "人物模型图生成失败";
+      const message = t(error instanceof Error ? error.message : "人物模型图生成失败");
       const recovered = await recoverLatestProjectIf(
         (latestProject) => {
           const latestModel = latestProject.characterModels.find((model) => model.id === modelId);
@@ -1782,7 +1793,10 @@ export function VideoFlowMap({
         },
         (latestProject) => {
           const latestModel = latestProject.characterModels.find((model) => model.id === modelId);
-          return `${latestModel?.name || targetModel.name} 人物模型候选图已从后端恢复，当前共 ${latestModel?.candidateImages?.length || 0} 张。`;
+          return t("{name} 人物模型候选图已从后端恢复，当前共 {count} 张。", {
+            name: latestModel?.name || targetModel.name,
+            count: latestModel?.candidateImages?.length || 0
+          });
         }
       );
       if (recovered) return;
@@ -1817,7 +1831,7 @@ export function VideoFlowMap({
     startModelProgress(modelId);
     setModelBusyId(modelId);
     applyProject(clearedProject);
-    onAssistantMessage(`${targetModel.name} 场景模型图正在生成，一次返回 3 张候选图。`);
+    onAssistantMessage(t("{name} 场景模型图正在生成，一次返回 3 张候选图。", { name: targetModel.name }));
     try {
       const syncedProject = await apiClient.saveProject(clearedProject);
       if (controller.signal.aborted) return;
@@ -1829,11 +1843,11 @@ export function VideoFlowMap({
       if (controller.signal.aborted) return;
       applyProject(next);
       await finishModelProgress(modelId);
-      onAssistantMessage(`${targetModel.name} 场景模型候选图已生成。`);
+      onAssistantMessage(t("{name} 场景模型候选图已生成。", { name: targetModel.name }));
     } catch (error) {
       stopModelProgress(modelId);
       if (controller.signal.aborted) return;
-      const message = error instanceof Error ? error.message : "场景模型图生成失败";
+      const message = t(error instanceof Error ? error.message : "场景模型图生成失败");
       const recovered = await recoverLatestProjectIf(
         (latestProject) => {
           const latestModel = latestProject.sceneModels.find((model) => model.id === modelId);
@@ -1841,7 +1855,10 @@ export function VideoFlowMap({
         },
         (latestProject) => {
           const latestModel = latestProject.sceneModels.find((model) => model.id === modelId);
-          return `${latestModel?.name || targetModel.name} 场景模型候选图已从后端恢复，当前共 ${latestModel?.candidateImages?.length || 0} 张。`;
+          return t("{name} 场景模型候选图已从后端恢复，当前共 {count} 张。", {
+            name: latestModel?.name || targetModel.name,
+            count: latestModel?.candidateImages?.length || 0
+          });
         }
       );
       if (recovered) return;
@@ -1878,7 +1895,7 @@ export function VideoFlowMap({
     startModelProgress(busyId);
     setModelBusyId(busyId);
     applyProject(clearedProject);
-    onAssistantMessage("Image Prompt 风格参考图正在生成，一次返回 3 张候选图。");
+    onAssistantMessage(t("Image Prompt 风格参考图正在生成，一次返回 3 张候选图。"));
     try {
       const syncedProject = await apiClient.saveProject(clearedProject);
       if (controller.signal.aborted) return;
@@ -1890,11 +1907,11 @@ export function VideoFlowMap({
       if (controller.signal.aborted) return;
       applyProject(next);
       await finishModelProgress(busyId);
-      onAssistantMessage("Image Prompt 风格参考候选图已生成。");
+      onAssistantMessage(t("Image Prompt 风格参考候选图已生成。"));
     } catch (error) {
       stopModelProgress(busyId);
       if (controller.signal.aborted) return;
-      const message = error instanceof Error ? error.message : "Image Prompt 图生成失败";
+      const message = t(error instanceof Error ? error.message : "Image Prompt 图生成失败");
       const recovered = await recoverLatestProjectIf(
         (latestProject) => {
           const latestFlow = latestProject.videoFlows.find((flow) => flow.id === flowId);
@@ -1902,7 +1919,9 @@ export function VideoFlowMap({
         },
         (latestProject) => {
           const latestFlow = latestProject.videoFlows.find((flow) => flow.id === flowId);
-          return `Image Prompt 候选图已从后端恢复，当前共 ${latestFlow?.nodes.promptNode.candidateImages?.length || 0} 张。`;
+          return t("Image Prompt 候选图已从后端恢复，当前共 {count} 张。", {
+            count: latestFlow?.nodes.promptNode.candidateImages?.length || 0
+          });
         }
       );
       if (recovered) return;
@@ -1967,7 +1986,7 @@ export function VideoFlowMap({
     } catch {
       // Keep local cancellation visible if persistence has a transient failure.
     }
-    onAssistantMessage("候选图生成已取消。");
+    onAssistantMessage(t("候选图生成已取消。"));
   }
 
   function updateCharacterAspectRatio(modelId: string, value: string) {
@@ -1986,7 +2005,7 @@ export function VideoFlowMap({
   async function saveCharacterPrompt(modelId: string, value: string) {
     const model = project.characterModels.find((item) => item.id === modelId);
     if (!model) return;
-    await onSave(updateCharacterConsistencyPrompt(project, modelId, value), `${model.name} 人物一致性 Prompt 已保存。`);
+    await onSave(updateCharacterConsistencyPrompt(project, modelId, value), t("{name} 人物一致性 Prompt 已保存。", { name: model.name }));
   }
 
   function updateScenePrompt(modelId: string, value: string) {
@@ -2064,9 +2083,9 @@ export function VideoFlowMap({
     try {
       const savedProject = await apiClient.saveProject(nextProject);
       applyProject(savedProject);
-      onAssistantMessage("视频生产比例已保存，当前片段需要重新生成。");
+      onAssistantMessage(t("视频生产比例已保存，当前片段需要重新生成。"));
     } catch (error) {
-      onAssistantMessage(error instanceof Error ? error.message : "update video aspect ratio failed");
+      onAssistantMessage(t(error instanceof Error ? error.message : "保存视频生产比例失败"));
     }
   }
 
@@ -2078,7 +2097,7 @@ export function VideoFlowMap({
       )
     };
     onProjectChange(nextProject);
-    await onSave(nextProject, "人物主模型图已确认。");
+    await onSave(nextProject, t("人物主模型图已确认。"));
   }
 
   async function confirmSceneModel(modelId: string, assetId: string) {
@@ -2089,7 +2108,7 @@ export function VideoFlowMap({
       )
     };
     onProjectChange(nextProject);
-    await onSave(nextProject, "场景主模型图已确认。");
+    await onSave(nextProject, t("场景主模型图已确认。"));
   }
 
   async function confirmImagePromptReference(flowId: string, assetId: string) {
@@ -2099,7 +2118,7 @@ export function VideoFlowMap({
     const nextProject = withUpdatedFlow(project, flowId, (segmentFlow) => ({
       ...segmentFlow,
       imagePromptImageUrl: asset?.url,
-      imagePromptImageName: asset ? "Image Prompt 参考图" : undefined,
+      imagePromptImageName: asset ? t("Image Prompt 参考图") : undefined,
       status: segmentFlow.status === "ready" ? "idle" : segmentFlow.status,
       videoAssetId: undefined,
       pendingVideoJobId: undefined,
@@ -2111,7 +2130,7 @@ export function VideoFlowMap({
       }
     }));
     onProjectChange(nextProject);
-    await onSave(nextProject, "Image Prompt 风格参考图已确认。");
+    await onSave(nextProject, t("Image Prompt 风格参考图已确认。"));
   }
 
   function startModelProgress(modelId: string) {
@@ -2162,11 +2181,11 @@ export function VideoFlowMap({
     if (missingCharacters.length === 0 && missingScenes.length === 0) return "";
 
     const parts = [
-      missingCharacters.length ? `人物：${missingCharacters.join("、")}` : "",
-      missingScenes.length ? `场景：${missingScenes.join("、")}` : ""
+      missingCharacters.length ? t("人物：{names}", { names: missingCharacters.join(", ") }) : "",
+      missingScenes.length ? t("场景：{names}", { names: missingScenes.join(", ") }) : ""
     ].filter(Boolean);
 
-    return `已连接的${parts.join("；")}还没有确认主图。请打开对应模型节点，在候选图中点击“确认这张”后再生成视频。`;
+    return t("已连接的{parts}还没有确认主图。请打开对应模型节点，在候选图中点击“确认这张”后再生成视频。", { parts: parts.join("; ") });
   }
 
   function getConfirmableSourceStatus(
@@ -2175,22 +2194,22 @@ export function VideoFlowMap({
     hasCandidateImages: boolean
   ): { status: GenerationStatus; label?: string } {
     if (status === "ready" && !hasConfirmedImage && hasCandidateImages) {
-      return { status: "idle", label: "待确认" };
+      return { status: "idle", label: t("待确认") };
     }
     return { status };
   }
 
   function renderStatus(node: Pick<FlowNode, "status" | "stale">, label?: string) {
-    return <span className={`status ${node.status}`}>{node.stale ? "stale" : label || node.status}</span>;
+    return <span className={`status ${node.status}`}>{t(node.stale ? "stale" : label || node.status)}</span>;
   }
 
   function renderModelSourceNode(model: CharacterModel | SceneModel, index: number, kind: "character" | "scene") {
     const meta = sourceMeta[kind];
     const Icon = meta.icon;
     const nodeCode = `${sourceCodePrefix[kind]}${String(index + 1).padStart(2, "0")}`;
-    const modelName = model.name || `${meta.label} ${index + 1}`;
+    const modelName = model.name || t("{label} {index}", { label: t(meta.label), index: index + 1 });
     const previewAsset = getModelPreviewAsset(model);
-    const statusLabel = model.confirmedImageId ? "已确认模型图" : "未确认模型图";
+    const statusLabel = model.confirmedImageId ? t("已确认模型图") : t("未确认模型图");
     const sourceStatus = getConfirmableSourceStatus(model.status, Boolean(model.confirmedImageId), model.candidateImages.length > 0);
     const nodeKey = getModelNodeKey(kind, model.id);
     const draftName = modelNameDrafts[nodeKey] ?? modelName;
@@ -2219,7 +2238,7 @@ export function VideoFlowMap({
               <input
                 className="workflow-model-name-input"
                 value={draftName}
-                aria-label={`编辑${nodeCode}模型名称`}
+                aria-label={t("编辑{code}模型名称", { code: nodeCode })}
                 onChange={(event) => {
                   const value = event.target.value;
                   setModelNameDrafts((current) => ({ ...current, [nodeKey]: value }));
@@ -2245,20 +2264,20 @@ export function VideoFlowMap({
                 onPointerDown={(event) => event.stopPropagation()}
               />
             </div>
-            <span>{meta.label} · {meta.sub} · {statusLabel}</span>
+            <span>{t(meta.label)} · {t(meta.sub)} · {statusLabel}</span>
           </div>
         </header>
         <span className="workflow-node-code">{nodeCode}</span>
         <div className={previewAsset ? "workflow-model-preview" : "workflow-model-preview empty"}>
           {previewAsset ? (
             <>
-              <img src={previewAsset.url} alt={`${nodeCode} ${modelName} 模型图`} />
-              <span>{model.confirmedImageId ? "已确认" : "候选图"}</span>
+              <img src={previewAsset.url} alt={t("{code} {name} 模型图", { code: nodeCode, name: modelName })} />
+              <span>{model.confirmedImageId ? t("已确认") : t("候选图")}</span>
             </>
           ) : (
             <div>
               <ImageIcon size={22} />
-              <strong>暂无模型图</strong>
+              <strong>{t("暂无模型图")}</strong>
             </div>
           )}
         </div>
@@ -2270,7 +2289,7 @@ export function VideoFlowMap({
               : "workflow-port output-port"
           }
           type="button"
-          aria-label={`从${nodeCode} ${modelName}拖出连接`}
+          aria-label={t("从{code} {name}拖出连接", { code: nodeCode, name: modelName })}
           onPointerDown={(event) => startConnection(event, { sourceId: model.id, sourceKind: kind })}
         />
       </article>
@@ -2296,14 +2315,14 @@ export function VideoFlowMap({
     const shot = project.storyState.storyboard.find((item) => item.id === segmentFlow.shotId);
     const segmentNumber = String(index + 1).padStart(2, "0");
     const nodeCode = `${sourceCodePrefix[kind]}${segmentNumber}`;
-    const nodeName = `${nodeCode} ${meta.label}`;
-    const shotName = shot ? shot.shotType : `第${index + 1}段`;
+    const nodeName = `${nodeCode} ${t(meta.label)}`;
+    const shotName = shot ? shot.shotType : t("第{index}段", { index: index + 1 });
     const statusNode = kind === "imagePrompt"
       ? { ...segmentFlow.nodes.promptNode, status: getImagePromptStatus(segmentFlow) }
       : segmentFlow.nodes.previewNode;
-    const summary = kind === "script" ? shot?.composition || "等待分镜脚本" : "";
+    const summary = kind === "script" ? shot?.composition || t("等待分镜脚本") : "";
     const imagePromptPreviewAsset = kind === "imagePrompt" ? getImagePromptPreviewAsset(segmentFlow) : undefined;
-    const imagePromptStatusLabel = segmentFlow.nodes.promptNode.confirmedImageId ? "已确认风格图" : imagePromptPreviewAsset ? "候选图" : "未生成风格图";
+    const imagePromptStatusLabel = segmentFlow.nodes.promptNode.confirmedImageId ? t("已确认风格图") : imagePromptPreviewAsset ? t("候选图") : t("未生成风格图");
     const imagePromptSourceStatus = kind === "imagePrompt"
       ? getConfirmableSourceStatus(
           statusNode.status,
@@ -2335,24 +2354,24 @@ export function VideoFlowMap({
           <div>
             <strong>{nodeName}</strong>
             <span>
-              第{index + 1}段 · {shotName} · {meta.sub}
+              {t("第{index}段", { index: index + 1 })} · {shotName} · {t(meta.sub)}
             </span>
           </div>
         </header>
         <span className="workflow-node-code">{nodeCode}</span>
         {kind === "imagePrompt" ? (
           <>
-            <p>点击生成或选择一张视频风格参考图。确认后会作为当前片段的 Image Prompt 图片输入。</p>
+            <p>{t("点击生成或选择一张视频风格参考图。确认后会作为当前片段的 Image Prompt 图片输入。")}</p>
             <div className={imagePromptPreviewAsset ? "workflow-model-preview" : "workflow-model-preview empty"}>
               {imagePromptPreviewAsset ? (
                 <>
-                  <img src={imagePromptPreviewAsset.url} alt={`${nodeName} 风格参考图`} />
+                  <img src={imagePromptPreviewAsset.url} alt={t("{name} 风格参考图", { name: nodeName })} />
                   <span>{imagePromptStatusLabel}</span>
                 </>
               ) : (
                 <div>
                   <ImageIcon size={22} />
-                  <strong>暂无风格图</strong>
+                  <strong>{t("暂无风格图")}</strong>
                 </div>
               )}
             </div>
@@ -2371,7 +2390,7 @@ export function VideoFlowMap({
               : "workflow-port output-port"
           }
           type="button"
-          aria-label={`从${nodeName}拖出连接`}
+          aria-label={t("从{name}拖出连接", { name: nodeName })}
           onPointerDown={(event) => startConnection(event, { fromFlowId: segmentFlow.id, sourceKind: kind })}
         />
       </article>
@@ -2385,7 +2404,7 @@ export function VideoFlowMap({
     const showProgress = segmentFlow.status === "generating" || progress > 0;
     const videoError = segmentFlow.error || segmentFlow.nodes.videoNode.error;
     const isReady = segmentFlow.status === "ready";
-    const nodeSummary = buildVideoNodeSummary(shot, segmentFlow, index);
+    const nodeSummary = buildVideoNodeSummary(shot, segmentFlow, index, t);
     const nodeClassName = [
       "workflow-node",
       "workflow-video-node",
@@ -2419,21 +2438,21 @@ export function VideoFlowMap({
         <header>
           <Video size={18} />
           <div>
-            <strong>第{index + 1}段 15s 视频</strong>
+            <strong>{t("第{index}段 15s 视频", { index: index + 1 })}</strong>
             <span>{shot ? shot.shotType : "Video Generation"}</span>
           </div>
           <label className="workflow-video-ratio-control" onClick={(event) => event.stopPropagation()}>
-            <span>比例</span>
+            <span>{t("比例")}</span>
             <select
               value={segmentFlow.aspectRatio}
-              aria-label={`第${index + 1}段视频生产比例`}
+              aria-label={t("第{index}段视频生产比例", { index: index + 1 })}
               disabled={segmentFlow.status === "generating" || Boolean(segmentFlow.pendingVideoJobId)}
               onChange={(event) => void updateVideoAspectRatio(segmentFlow.id, event.target.value as VideoAspectRatio)}
               onPointerDown={(event) => event.stopPropagation()}
             >
               {videoAspectRatioOptions.map((option) => (
                 <option value={option.value} key={option.value}>
-                  {option.label}
+                  {t(option.label)}
                 </option>
               ))}
             </select>
@@ -2458,7 +2477,7 @@ export function VideoFlowMap({
                 data-flow-id={segmentFlow.id}
                 data-input-kind={inputKind}
               />
-              <span>{inputLabels[inputKind]}</span>
+              <span>{t(inputLabels[inputKind])}</span>
             </div>
           ))}
         </div>
@@ -2473,13 +2492,13 @@ export function VideoFlowMap({
             onPointerDown={(event) => event.stopPropagation()}
             type="button"
           >
-            ready · 点击预览视频
+            ready · {t("点击预览视频")}
           </button>
         ) : null}
         {showProgress ? (
-          <div className="workflow-video-progress" aria-label={`视频生成进度 ${Math.round(progress)}%`}>
+          <div className="workflow-video-progress" aria-label={t("视频生成进度 {progress}%", { progress: Math.round(progress) })}>
             <div className="workflow-video-progress-meta">
-              <span>{segmentFlow.pendingVideoJobId ? "等待视频 URL" : "生成中"}</span>
+              <span>{segmentFlow.pendingVideoJobId ? t("等待视频 URL") : t("生成中")}</span>
               <strong>{Math.round(progress)}%</strong>
             </div>
             <div className="workflow-video-progress-track">
@@ -2506,10 +2525,10 @@ export function VideoFlowMap({
             className="workflow-model-dialog"
             role="dialog"
             aria-modal="true"
-            aria-label={`${model.name} 人物模型图生成`}
+            aria-label={t("{name} 人物模型图生成", { name: model.name })}
             onClick={(event) => event.stopPropagation()}
           >
-            <button type="button" className="workflow-dialog-close workflow-model-close" onClick={() => setModelDialog(null)} aria-label="关闭人物模型弹窗">
+            <button type="button" className="workflow-dialog-close workflow-model-close" onClick={() => setModelDialog(null)} aria-label={t("关闭人物模型弹窗")}>
               <X size={18} />
             </button>
             <AIImageGenerationPanel
@@ -2517,10 +2536,10 @@ export function VideoFlowMap({
               title={model.name}
               description={model.description}
               status={model.status}
-              promptLabel="人物一致性 Prompt"
+              promptLabel={t("人物一致性 Prompt")}
               prompt={model.consistencyPrompt}
-              promptPlaceholder="补充人物外貌、年龄、性别、服装、体型、气质和防跑偏约束。"
-              helperText="人物模型图会作为后续视频片段的人物参考图。这里可直接修改 Prompt，生成候选图时会使用最新内容。"
+              promptPlaceholder={t("补充人物外貌、年龄、性别、服装、体型、气质和防跑偏约束。")}
+              helperText={t("人物模型图会作为后续视频片段的人物参考图。这里可直接修改 Prompt，生成候选图时会使用最新内容。")}
               candidates={model.candidateImages}
               confirmedImageId={model.confirmedImageId}
               aspectRatio={model.imageAspectRatio || "3:4"}
@@ -2549,10 +2568,10 @@ export function VideoFlowMap({
           className="workflow-model-dialog"
           role="dialog"
           aria-modal="true"
-          aria-label={`${model.name} 场景模型图生成`}
+          aria-label={t("{name} 场景模型图生成", { name: model.name })}
           onClick={(event) => event.stopPropagation()}
         >
-          <button type="button" className="workflow-dialog-close workflow-model-close" onClick={() => setModelDialog(null)} aria-label="关闭场景模型弹窗">
+          <button type="button" className="workflow-dialog-close workflow-model-close" onClick={() => setModelDialog(null)} aria-label={t("关闭场景模型弹窗")}>
             <X size={18} />
           </button>
           <AIImageGenerationPanel
@@ -2560,14 +2579,14 @@ export function VideoFlowMap({
             title={model.name}
             description={model.description}
             status={model.status}
-            promptLabel="场景图生成 Prompt"
+            promptLabel={t("场景图生成 Prompt")}
             prompt={sanitizeSceneModelPromptText(
               model.generationPrompt || "",
               project.characterModels.map((character) => character.name),
               model.description || model.name
             )}
-            promptPlaceholder="描述你希望生成的场景模型图，例如场景空间、光线、色彩、构图、画风、镜头质感。"
-            helperText="Seedance 生成场景候选图时会优先使用这里的 Prompt。"
+            promptPlaceholder={t("描述你希望生成的场景模型图，例如场景空间、光线、色彩、构图、画风、镜头质感。")}
+            helperText={t("Seedance 生成场景候选图时会优先使用这里的 Prompt。")}
             keywords={model.visualKeywords}
             candidates={model.candidateImages}
             confirmedImageId={model.confirmedImageId}
@@ -2604,7 +2623,7 @@ export function VideoFlowMap({
     const keywords = [
       project.storyState.world.title,
       shot?.shotType,
-      ...selectedImagePromptCharacters.map((model) => `已选人物模型：${model.name}`),
+      ...selectedImagePromptCharacters.map((model) => t("已选人物模型：{name}", { name: model.name })),
       ...(project.storyState.world.styleKeywords || [])
     ].filter((value): value is string => Boolean(value));
 
@@ -2614,21 +2633,21 @@ export function VideoFlowMap({
           className="workflow-model-dialog"
           role="dialog"
           aria-modal="true"
-          aria-label={`${nodeCode} Image Prompt 图生成`}
+          aria-label={t("{code} Image Prompt 图生成", { code: nodeCode })}
           onClick={(event) => event.stopPropagation()}
         >
-          <button type="button" className="workflow-dialog-close workflow-model-close" onClick={() => setImagePromptDialogFlowId(null)} aria-label="关闭 Image Prompt 弹窗">
+          <button type="button" className="workflow-dialog-close workflow-model-close" onClick={() => setImagePromptDialogFlowId(null)} aria-label={t("关闭 Image Prompt 弹窗")}>
             <X size={18} />
           </button>
           <AIImageGenerationPanel
             kind="imagePrompt"
             title={`${nodeCode} Image Prompt`}
-            description="生成一张视频风格参考图，用于锁定当前片段的画风、色调、空间氛围、镜头质感和构图方向。"
+            description={t("生成一张视频风格参考图，用于锁定当前片段的画风、色调、空间氛围、镜头质感和构图方向。")}
             status={status}
-            promptLabel="Image Prompt 生成 Prompt"
+            promptLabel={t("Image Prompt 生成 Prompt")}
             prompt={prompt}
-            promptPlaceholder="描述当前片段需要的画面风格、色调、场景气氛、镜头质感和构图方向。"
-            helperText="Seedance 生成 Image Prompt 候选图时会使用这里的 Prompt，并自动带入当前片段已选且已确认的人物模型图，避免风格参考图生成新人物。确认后，该图片会作为当前视频片段的风格参考图传入视频生成。"
+            promptPlaceholder={t("描述当前片段需要的画面风格、色调、场景气氛、镜头质感和构图方向。")}
+            helperText={t("Seedance 生成 Image Prompt 候选图时会使用这里的 Prompt，并自动带入当前片段已选且已确认的人物模型图，避免风格参考图生成新人物。确认后，该图片会作为当前视频片段的风格参考图传入视频生成。")}
             keywords={keywords}
             candidates={candidates}
             confirmedImageId={targetFlow.nodes.promptNode.confirmedImageId}
@@ -2656,7 +2675,7 @@ export function VideoFlowMap({
     const targetIndex = project.videoFlows.findIndex((item) => item.id === videoDialogFlowId);
     const shot = project.storyState.storyboard.find((item) => item.id === targetFlow.shotId);
     const videoAsset = getVideoAsset(targetFlow);
-    const title = `第${targetIndex + 1}段 15s 视频`;
+    const title = t("第{index}段 15s 视频", { index: targetIndex + 1 });
     const shotTitle = shot ? shot.shotType : "Video Generation";
 
     return (
@@ -2670,11 +2689,11 @@ export function VideoFlowMap({
         >
           <header>
             <div>
-              <span className="eyebrow">Seedance 2.0 已生成视频</span>
+              <span className="eyebrow">{t("Seedance 2.0 已生成视频")}</span>
               <h2 id="workflow-video-dialog-title">{title}</h2>
               <p>{shotTitle}</p>
             </div>
-            <button type="button" className="workflow-dialog-close" onClick={() => setVideoDialogFlowId(null)} aria-label="关闭视频预览弹窗">
+            <button type="button" className="workflow-dialog-close" onClick={() => setVideoDialogFlowId(null)} aria-label={t("关闭视频预览弹窗")}>
               <X size={18} />
             </button>
           </header>
@@ -2683,18 +2702,18 @@ export function VideoFlowMap({
               <>
                 <video src={videoAsset.url} controls playsInline preload="metadata" />
                 <div className="workflow-video-dialog-actions">
-                  <span>{videoAsset.provider || "Seedance 2.0"} · {videoAsset.createdAt ? new Date(videoAsset.createdAt).toLocaleString() : "已生成"}</span>
+                  <span>{videoAsset.provider || "Seedance 2.0"} · {videoAsset.createdAt ? formatDateTime(videoAsset.createdAt) : t("已生成")}</span>
                   <a className="secondary-button" href={apiClient.assetDownloadUrl(project.id, videoAsset.id)}>
                     <Download size={16} />
-                    存到本地
+                    {t("存到本地")}
                   </a>
                 </div>
               </>
             ) : (
               <div className="workflow-video-empty-preview">
                 <Video size={32} />
-                <strong>当前片段显示 ready，但没有找到视频素材</strong>
-                <p>请重新生成这一段，或检查项目资产是否已正确回填到 videoAssetId。</p>
+                <strong>{t("当前片段显示 ready，但没有找到视频素材")}</strong>
+                <p>{t("请重新生成这一段，或检查项目资产是否已正确回填到 videoAssetId。")}</p>
               </div>
             )}
           </div>
@@ -2710,8 +2729,10 @@ export function VideoFlowMap({
 
     const targetIndex = project.videoFlows.findIndex((item) => item.id === scriptDialogFlowId);
     const shot = project.storyState.storyboard.find((item) => item.id === targetFlow.shotId);
-    const title = `SB${String(targetIndex + 1).padStart(2, "0")} 分镜脚本`;
-    const shotTitle = shot ? `第${targetIndex + 1}段 · ${shot.shotType}` : `第${targetIndex + 1}段`;
+    const title = t("SB{index} 分镜脚本", { index: String(targetIndex + 1).padStart(2, "0") });
+    const shotTitle = shot
+      ? t("第{index}段 · {shot}", { index: targetIndex + 1, shot: shot.shotType })
+      : t("第{index}段", { index: targetIndex + 1 });
     const segmentScript = formatStoryboardShot(shot, targetFlow, targetIndex, project.storyState.seedanceScript);
 
     return (
@@ -2725,17 +2746,17 @@ export function VideoFlowMap({
         >
           <header>
             <div>
-              <span className="eyebrow">Seedance 2.0 分镜脚本</span>
+              <span className="eyebrow">{t("Seedance 2.0 分镜脚本")}</span>
               <h2 id="workflow-script-dialog-title">{title}</h2>
               <p>{shotTitle}</p>
             </div>
-            <button type="button" className="workflow-dialog-close" onClick={() => setScriptDialogFlowId(null)} aria-label="关闭分镜脚本弹窗">
+            <button type="button" className="workflow-dialog-close" onClick={() => setScriptDialogFlowId(null)} aria-label={t("关闭分镜脚本弹窗")}>
               <X size={18} />
             </button>
           </header>
           <div className="workflow-script-dialog-body">
             <article>
-              <h3>当前片段完整分镜</h3>
+              <h3>{t("当前片段完整分镜")}</h3>
               <pre>{segmentScript}</pre>
             </article>
           </div>
@@ -2751,19 +2772,19 @@ export function VideoFlowMap({
     <section className="page flow-page">
       <div className="workflow-shell">
         <div className="workflow-floating-actions">
-          <select value={flow.id} onChange={(event) => selectFlow(event.target.value)} aria-label="选择视频片段">
+          <select value={flow.id} onChange={(event) => selectFlow(event.target.value)} aria-label={t("选择视频片段")}>
             {project.videoFlows.map((item, index) => {
               const shot = project.storyState.storyboard.find((storyShot) => storyShot.id === item.shotId);
               return (
                 <option key={item.id} value={item.id}>
-                  第{index + 1}段 {shot ? shot.shotType : item.id}
+                  {t("第{index}段 {shot}", { index: index + 1, shot: shot ? shot.shotType : item.id })}
                 </option>
               );
             })}
           </select>
           <button className="secondary-button" onClick={() => void persistCurrent()}>
             <Save size={16} />
-            保存
+            {t("保存")}
           </button>
           <button
             className={currentVideoCancellable ? "danger-button" : "primary-button"}
@@ -2771,7 +2792,7 @@ export function VideoFlowMap({
             disabled={currentVideoActionDisabled}
           >
             {currentVideoCancellable ? <X size={16} /> : <Wand2 size={16} />}
-            {currentVideoCancellable ? "取消生成" : "生成当前 15 秒"}
+            {currentVideoCancellable ? t("取消生成") : t("生成当前 15 秒")}
           </button>
         </div>
         <div
@@ -2872,11 +2893,18 @@ function stripGlobalSettingsForActiveCharacters(segmentScript: string): string {
   return normalized.slice(headingMatch.index);
 }
 
-function buildVideoNodeSummary(shot: StoryboardShot | undefined, flow: VideoFlow, index: number): string {
+function buildVideoNodeSummary(
+  shot: StoryboardShot | undefined,
+  flow: VideoFlow,
+  index: number,
+  t: (source: string, values?: TranslationValues) => string
+): string {
   const cleanFlowPrompt = cleanVideoPrompt(flow.prompt);
-  const primary = shot?.shotType || cleanFlowPrompt || flow.actionDescription || "待生成片段";
+  const primary = shot?.shotType || cleanFlowPrompt || flow.actionDescription || t("待生成片段");
   const action = shot?.characterActions || flow.actionDescription || shot?.videoPrompt || "";
-  const summary = action ? `第${index + 1}段：${primary}。${action}` : `第${index + 1}段：${primary}`;
+  const summary = action
+    ? t("第{index}段：{primary}。{action}", { index: index + 1, primary, action })
+    : t("第{index}段：{primary}", { index: index + 1, primary });
 
   return compactPromptText(summary, 88);
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle2, Cpu, Download, ImageIcon, Maximize2, Palette, Ratio, Sparkles, Wand2, X } from "lucide-react";
 import type { MediaAsset } from "@/types/domain";
+import { useI18n } from "../../i18n/I18nProvider";
 
 type GenerationKind = "character" | "scene" | "imagePrompt";
 
@@ -68,6 +69,7 @@ export function AIImageGenerationPanel({
   onCancel,
   onConfirm
 }: AIImageGenerationPanelProps) {
+  const { t } = useI18n();
   const hasCandidates = candidates.length > 0;
   const accent = kind === "character" ? "from-fuchsia-500 to-violet-500" : "from-cyan-500 to-blue-500";
   const [progress, setProgress] = useState(0);
@@ -75,12 +77,12 @@ export function AIImageGenerationPanel({
   const displayedProgress = loadingProgress ?? progress;
   const loadingText =
     kind === "character"
-      ? "Creating your character model..."
+      ? t("正在创建人物模型...")
       : kind === "imagePrompt"
-        ? "Creating your image prompt reference..."
-        : "Creating your scene model...";
+        ? t("正在创建 Image Prompt 参考图...")
+        : t("正在创建场景模型...");
   const selectedAspectRatio = aspectRatio || (kind === "character" ? "3:4" : "16:9");
-  const badgeLabel = kind === "character" ? "人物模型图" : kind === "imagePrompt" ? "Image Prompt 图" : "场景模型图";
+  const badgeLabel = kind === "character" ? t("人物模型图") : kind === "imagePrompt" ? t("Image Prompt 图") : t("场景模型图");
 
   useEffect(() => {
     if (!isLoading) {
@@ -126,7 +128,7 @@ export function AIImageGenerationPanel({
             <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">
               {badgeLabel}
             </span>
-            <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">{status}</span>
+            <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">{t(status)}</span>
           </div>
           <h2 className="m-0 text-xl font-semibold text-zinc-950">{title}</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-600">{description}</p>
@@ -168,19 +170,19 @@ export function AIImageGenerationPanel({
           )}
 
           <div className="grid gap-2 rounded-xl bg-zinc-50 p-3">
-            <SettingRow icon={<Cpu className="size-4" />} label="生成模型" value="Seedance 2.0 Image" />
-            <SettingRow icon={<ImageIcon className="size-4" />} label="候选数量" value="一次生成 3 张" />
+            <SettingRow icon={<Cpu className="size-4" />} label={t("生成模型")} value="Seedance 2.0 Image" />
+            <SettingRow icon={<ImageIcon className="size-4" />} label={t("候选数量")} value={t("一次生成 3 张")} />
             <SettingSelect
               icon={<Ratio className="size-4" />}
-              label="画幅建议"
+              label={t("画幅建议")}
               value={selectedAspectRatio}
               options={aspectRatioOptions.map((option) => ({
                 value: option.value,
-                label: kind === "character" ? option.characterLabel : option.sceneLabel
+                label: t(kind === "character" ? option.characterLabel : option.sceneLabel)
               }))}
               onChange={onAspectRatioChange}
             />
-            <SettingRow icon={<Palette className="size-4" />} label="风格锁定" value="2D 半写实国漫" />
+            <SettingRow icon={<Palette className="size-4" />} label={t("风格锁定")} value={t("2D 半写实国漫")} />
           </div>
 
           <button
@@ -194,15 +196,15 @@ export function AIImageGenerationPanel({
             }
           >
             {isLoading ? <X className="size-4" /> : <Sparkles className="size-4" />}
-            {isLoading ? "取消生成" : `生成 3 张候选图${generationCostLabel ? ` · ${generationCostLabel}` : ""}`}
+            {isLoading ? t("取消生成") : `${t("生成 3 张候选图")}${generationCostLabel ? ` · ${generationCostLabel}` : ""}`}
           </button>
         </div>
 
         <div className="min-w-0 rounded-xl bg-zinc-50 p-3">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <h3 className="m-0 text-sm font-semibold text-zinc-900">候选图选择</h3>
-              <p className="mt-1 text-xs text-zinc-500">选择一张作为后续视频生成的确认模型图。</p>
+              <h3 className="m-0 text-sm font-semibold text-zinc-900">{t("候选图选择")}</h3>
+              <p className="mt-1 text-xs text-zinc-500">{t("选择一张作为后续视频生成的确认模型图。")}</p>
             </div>
           </div>
 
@@ -214,8 +216,8 @@ export function AIImageGenerationPanel({
             <div className="grid min-h-[260px] place-items-center rounded-xl border border-dashed border-zinc-300 bg-white p-6 text-center">
               <div>
                 <ImageIcon className="mx-auto size-9 text-zinc-300" />
-                <p className="mt-3 text-sm font-medium text-zinc-700">还没有候选图</p>
-                <p className="mt-1 text-xs leading-5 text-zinc-500">确认 Prompt 后点击生成，系统会一次返回 3 张可选图片。</p>
+                <p className="mt-3 text-sm font-medium text-zinc-700">{t("还没有候选图")}</p>
+                <p className="mt-1 text-xs leading-5 text-zinc-500">{t("确认 Prompt 后点击生成，系统会一次返回 3 张可选图片。")}</p>
               </div>
             </div>
           )}
@@ -235,15 +237,15 @@ export function AIImageGenerationPanel({
                       type="button"
                       onClick={() => setPreviewAsset(asset)}
                       className="candidate-image-preview-button relative aspect-[3/4] bg-zinc-100"
-                      aria-label={`查看 ${title} 方案 ${index + 1} 大图`}
+                      aria-label={t("查看 {title} 方案 {index} 大图", { title, index: index + 1 })}
                     >
                       <img src={asset.url} alt={`${title} candidate ${index + 1}`} className="size-full object-cover" />
                       <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-xs font-medium text-white">
-                        方案 {index + 1}
+                        {t("方案 {index}", { index: index + 1 })}
                       </span>
                       <span className="candidate-image-preview-hint">
                         <Maximize2 className="size-3.5" />
-                        查看大图
+                        {t("查看大图")}
                       </span>
                     </button>
                     <div className="grid gap-2 p-3">
@@ -252,7 +254,7 @@ export function AIImageGenerationPanel({
                         onClick={() => onConfirm(asset.id)}
                         className="flex h-9 items-center justify-between gap-2 rounded-lg bg-zinc-100 px-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-200"
                       >
-                        <span>{selected ? "已确认" : "确认这张"}</span>
+                        <span>{selected ? t("已确认") : t("确认这张")}</span>
                         {selected && <CheckCircle2 className="size-4 text-emerald-600" />}
                       </button>
                       <button
@@ -261,7 +263,7 @@ export function AIImageGenerationPanel({
                         className="flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50"
                       >
                         <Maximize2 className="size-4" />
-                        查看大图
+                        {t("查看大图")}
                       </button>
                       {getDownloadUrl && (
                         <a
@@ -269,7 +271,7 @@ export function AIImageGenerationPanel({
                           className="flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50"
                         >
                           <Download className="size-4" />
-                          存到本地
+                          {t("存到本地")}
                         </a>
                       )}
                     </div>
@@ -283,7 +285,7 @@ export function AIImageGenerationPanel({
             <div title={error} className="mt-3 flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">
               <AlertCircle className="size-4" />
               <span className="min-w-0 break-words">
-                {error || "生成失败，请检查图片模型配置后重试。"}
+                {error ? t(error) : t("生成失败，请检查图片模型配置后重试。")}
               </span>
             </div>
           )}
@@ -297,20 +299,20 @@ export function AIImageGenerationPanel({
           className="image-preview-dialog"
           role="dialog"
           aria-modal="true"
-          aria-label={`${title} 方案 ${previewAssetIndex + 1} 大图预览`}
+          aria-label={t("{title} 方案 {index} 大图预览", { title, index: previewAssetIndex + 1 })}
           onClick={(event) => event.stopPropagation()}
         >
           <header>
             <div>
-              <span>{kind === "character" ? "人物模型大图" : kind === "imagePrompt" ? "Image Prompt 大图" : "场景模型大图"}</span>
-              <h3>{title} · 方案 {previewAssetIndex + 1}</h3>
+              <span>{kind === "character" ? t("人物模型大图") : kind === "imagePrompt" ? t("Image Prompt 大图") : t("场景模型大图")}</span>
+              <h3>{title} · {t("方案 {index}", { index: previewAssetIndex + 1 })}</h3>
             </div>
-            <button type="button" onClick={() => setPreviewAsset(null)} aria-label="关闭大图预览">
+            <button type="button" onClick={() => setPreviewAsset(null)} aria-label={t("关闭大图预览")}>
               <X size={18} />
             </button>
           </header>
           <div className="image-preview-frame">
-            <img src={previewAsset.url} alt={`${title} 方案 ${previewAssetIndex + 1} 大图`} />
+            <img src={previewAsset.url} alt={t("{title} 方案 {index} 大图", { title, index: previewAssetIndex + 1 })} />
           </div>
           <footer>
             <button
@@ -321,12 +323,12 @@ export function AIImageGenerationPanel({
                 setPreviewAsset(null);
               }}
             >
-              {previewSelected ? "已确认这张" : "确认这张"}
+              {previewSelected ? t("已确认这张") : t("确认这张")}
             </button>
             {getDownloadUrl && (
               <a href={getDownloadUrl(previewAsset)}>
                 <Download className="size-4" />
-                存到本地
+                {t("存到本地")}
               </a>
             )}
           </footer>
@@ -338,12 +340,13 @@ export function AIImageGenerationPanel({
 }
 
 function GenerationLoadingState({ text, progress }: { text: string; progress: number }) {
+  const { t } = useI18n();
   return (
     <div className="grid min-h-[300px] place-items-center rounded-xl border border-zinc-200 bg-white px-8 py-10">
       <div className="w-full max-w-[360px] text-center">
         <div className="mx-auto mb-6 size-20 rounded-full border-[6px] border-zinc-100 border-t-fuchsia-500 border-r-violet-500 animate-spin" />
         <p className="text-base font-medium text-zinc-800">{text}</p>
-        <p className="mt-2 text-sm text-zinc-500">This usually takes 10-15 seconds</p>
+        <p className="mt-2 text-sm text-zinc-500">{t("通常需要 10–15 秒")}</p>
         <div className="relative mt-6 h-2 overflow-hidden rounded-full bg-zinc-200">
           <div
             className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-violet-500 transition-all duration-300"

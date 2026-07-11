@@ -13,11 +13,13 @@ import { normalizeProjectVideoFlows } from "./lib/projectFlowSync";
 import { getProjectLoadOrder, readStoredActiveProjectId, rememberActiveProjectId } from "./lib/projectSelection";
 import { SOURCE_IMPORT_MAX_FILE_BYTES, buildSourceFilePayload } from "./lib/sourceImportFile";
 import { getProviderReadiness, type ProviderStatusSnapshot } from "./lib/providerReadiness";
+import { useI18n } from "./i18n/I18nProvider";
 import type { PageKey, Project } from "./types/domain";
 
 const LOCAL_WORKSPACE_ID = "local-workspace";
 
 export default function App() {
+  const { t } = useI18n();
   const [page, setPageState] = useState<PageKey>(() => readInitialPage());
   const [project, setProject] = useState<Project | null>(null);
   const [projectCatalog, setProjectCatalog] = useState<Project[]>([]);
@@ -29,7 +31,7 @@ export default function App() {
   const [homeGenerationProjectId, setHomeGenerationProjectId] = useState<string | null>(null);
   const [homeErrorMessage, setHomeErrorMessage] = useState<string | null>(null);
   const [providerStatus, setProviderStatus] = useState<ProviderStatusSnapshot | null>(null);
-  const [assistantMessage, setAssistantMessage] = useState("正在加载项目...");
+  const [, setAssistantMessage] = useState(() => t("正在加载项目..."));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -69,8 +71,8 @@ export default function App() {
         activeProject =
           activeProject ||
           (await apiClient.createProject({
-            title: "霓虹雨夜的芯片恋人",
-            inspiration: "赛博朋克背景下的悬疑恋爱漫剧"
+            title: t("霓虹雨夜的芯片恋人"),
+            inspiration: t("赛博朋克背景下的悬疑恋爱漫剧")
           }));
         const normalizedProject = normalizeVideoFlows(activeProject);
         loadedProjects = upsertProjectCatalog(loadedProjects, normalizedProject);
@@ -82,10 +84,10 @@ export default function App() {
           setProject(saved);
           setProjectCatalog((current) => upsertProjectCatalog(current, saved));
         }
-        setAssistantMessage("项目已加载。可以从文本创作开始，也可以直接查看 Flow Map。");
+        setAssistantMessage(t("项目已加载。可以从文本创作开始，也可以直接查看 Flow Map。"));
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "加载失败");
-        setAssistantMessage("后端服务未就绪。请确认 API server 已启动。");
+        setError(t(loadError instanceof Error ? loadError.message : "加载失败"));
+        setAssistantMessage(t("后端服务未就绪。请确认 API server 已启动。"));
       } finally {
         setLoading(false);
       }
@@ -100,7 +102,7 @@ export default function App() {
     const checkGenerationResult = async () => {
       const recoveredProject = await findRecoveredHomeProject(homeGenerationStartedAt, homeGenerationProjectId);
       if (!recoveredProject || cancelled) return;
-      enterTextWorkbench(recoveredProject, "初版文本创作内容已生成，已自动进入文本创作页。");
+      enterTextWorkbench(recoveredProject, t("初版文本创作内容已生成，已自动进入文本创作页。"));
     };
 
     const interval = window.setInterval(() => {
@@ -115,7 +117,7 @@ export default function App() {
     };
   }, [homeGenerating, homeGenerationStartedAt, homeGenerationProjectId, showHome]);
 
-  async function saveProject(nextProject: Project, message = "项目已保存。") {
+  async function saveProject(nextProject: Project, message = t("项目已保存。")) {
     const saved = normalizeVideoFlows(await apiClient.saveProject(nextProject));
     updateActiveProject(saved);
     rememberActiveProjectId(LOCAL_WORKSPACE_ID, saved.id);
@@ -123,13 +125,13 @@ export default function App() {
   }
 
   if (loading) {
-    return <div className="boot-screen">正在启动喻鸣绘卷...</div>;
+    return <div className="boot-screen">{t("正在启动喻鸣绘卷...")}</div>;
   }
 
   if (!project) {
     return (
       <div className="boot-screen">
-        <h1>工作台暂时无法启动</h1>
+        <h1>{t("工作台暂时无法启动")}</h1>
         <p>{error}</p>
       </div>
     );
@@ -142,9 +144,9 @@ export default function App() {
         errorMessage={homeErrorMessage}
         currentProjectTitle={project.status !== "draft" ? project.title : undefined}
         selectedTextModel={homeTextModel}
-        providerReadiness={getProviderReadiness(providerStatus, homeTextModel)}
+        providerReadiness={getProviderReadiness(providerStatus, homeTextModel, t)}
         onTextModelChange={setHomeTextModel}
-        onOpenWorkbench={() => enterTextWorkbench(project, "已进入当前项目。")}
+        onOpenWorkbench={() => enterTextWorkbench(project, t("已进入当前项目。"))}
         onSubmit={(prompt) => void startFromHome(prompt)}
         onImportSourceFile={(file) => void startSourceImportFromHome(file)}
       />
@@ -216,7 +218,7 @@ export default function App() {
     setHomeGenerationProjectId(null);
     setHomeErrorMessage(null);
     const textModelLabel = homeTextModel === "gpt-5.5" ? "GPT-5.5" : "Kimi K2.6";
-    setAssistantMessage(`${textModelLabel} 正在根据首页初想法生成初版文本创作内容...`);
+    setAssistantMessage(t("{model} 正在根据首页初想法生成初版文本创作内容...", { model: textModelLabel }));
     let recovered = false;
     let generationProjectId: string | undefined;
     try {
@@ -236,15 +238,15 @@ export default function App() {
           }
         }
       );
-      enterTextWorkbench(nextProject, "初版文本创作内容已生成。你可以继续编辑世界观、剧情、分镜和 Seedance 脚本。");
+      enterTextWorkbench(nextProject, t("初版文本创作内容已生成。你可以继续编辑世界观、剧情、分镜和 Seedance 脚本。"));
     } catch (homeError) {
       const recoveredProject = await findRecoveredHomeProject(startedAt, generationProjectId).catch(() => null);
       if (recoveredProject) {
         recovered = true;
-        enterTextWorkbench(recoveredProject, "后端已完成文本生成，已恢复到文本创作页。");
+        enterTextWorkbench(recoveredProject, t("后端已完成文本生成，已恢复到文本创作页。"));
         return;
       }
-      const message = homeError instanceof Error ? homeError.message : "首页生成失败";
+      const message = t(homeError instanceof Error ? homeError.message : "首页生成失败");
       setHomeErrorMessage(message);
       setAssistantMessage(message);
     } finally {
@@ -259,7 +261,7 @@ export default function App() {
   async function startSourceImportFromHome(file: File) {
     if (homeGenerating || !project) return;
     if (file.size > SOURCE_IMPORT_MAX_FILE_BYTES) {
-      const message = "文档超过 8MB，请拆分后上传，或先粘贴关键章节文本。";
+      const message = t("文档超过 8MB，请拆分后上传，或先粘贴关键章节文本。");
       setHomeErrorMessage(message);
       setAssistantMessage(message);
       return;
@@ -271,7 +273,7 @@ export default function App() {
     setHomeGenerationProjectId(null);
     setHomeErrorMessage(null);
     const textModelLabel = homeTextModel === "gpt-5.5" ? "GPT-5.5" : "Kimi K2.6";
-    setAssistantMessage(`${textModelLabel} 正在读取导入文档「${file.name}」，并生成文本工作台内容...`);
+    setAssistantMessage(t("{model} 正在读取导入文档「{file}」，并生成文本工作台内容...", { model: textModelLabel, file: file.name }));
     let recovered = false;
     let generationProjectId: string | undefined;
     try {
@@ -291,15 +293,15 @@ export default function App() {
           }
         }
       );
-      enterTextWorkbench(nextProject, "小说/文档导入完成。已基于原文生成文本工作台内容。");
+      enterTextWorkbench(nextProject, t("小说/文档导入完成。已基于原文生成文本工作台内容。"));
     } catch (homeError) {
       const recoveredProject = await findRecoveredHomeProject(startedAt, generationProjectId).catch(() => null);
       if (recoveredProject) {
         recovered = true;
-        enterTextWorkbench(recoveredProject, "后端已完成小说/文档导入，已恢复到文本创作页。");
+        enterTextWorkbench(recoveredProject, t("后端已完成小说/文档导入，已恢复到文本创作页。"));
         return;
       }
-      const message = homeError instanceof Error ? homeError.message : "小说/文档导入失败";
+      const message = t(homeError instanceof Error ? homeError.message : "小说/文档导入失败");
       setHomeErrorMessage(message);
       setAssistantMessage(message);
     } finally {
@@ -356,9 +358,9 @@ export default function App() {
       window.sessionStorage.setItem("ai-comic-workbench-entered", "true");
       setShowHome(false);
       setPage("overview");
-      setAssistantMessage("项目已切换。");
+      setAssistantMessage(t("项目已切换。"));
     } catch (switchError) {
-      const message = switchError instanceof Error ? switchError.message : "项目切换失败";
+      const message = t(switchError instanceof Error ? switchError.message : "项目切换失败");
       setAssistantMessage(message);
     }
   }

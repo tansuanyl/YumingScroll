@@ -1,6 +1,8 @@
 import { Boxes, Code2, FileText, Home, LayoutDashboard, LockKeyhole } from "lucide-react";
 import { useState } from "react";
 import { BrandMark } from "./BrandMark";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useI18n } from "../i18n/I18nProvider";
 import type { PageKey, Project } from "../types/domain";
 
 type AppShellProps = {
@@ -24,8 +26,9 @@ export function AppShell({
   onReturnHome,
   children
 }: AppShellProps) {
+  const { t } = useI18n();
   const [navExpanded, setNavExpanded] = useState(false);
-  const projectTitle = project.storyState.world.title?.trim() || project.title || "未命名项目";
+  const projectTitle = project.storyState.world.title?.trim() || project.title || t("未命名项目");
 
   return (
     <div className="app-shell">
@@ -33,8 +36,8 @@ export function AppShell({
         <button
           type="button"
           className="brand sidebar-toggle"
-          title={navExpanded ? "收起导航" : "展开导航"}
-          aria-label={navExpanded ? "收起导航" : "展开导航"}
+          title={navExpanded ? t("收起导航") : t("展开导航")}
+          aria-label={navExpanded ? t("收起导航") : t("展开导航")}
           onClick={() => setNavExpanded((expanded) => !expanded)}
         >
           <BrandMark compact={!navExpanded} className="sidebar-brand-mark" />
@@ -47,39 +50,40 @@ export function AppShell({
                   type="button"
                   key={item.key}
                   className={page === item.key ? "nav-item active" : "nav-item"}
-                  title={item.label}
-                  aria-label={item.label}
+                  title={t(item.label)}
+                  aria-label={t(item.label)}
                   onClick={() => onNavigate(item.key)}
                 >
                   <Icon size={18} />
-                  <span className="nav-label">{item.label}</span>
+                  <span className="nav-label">{t(item.label)}</span>
                 </button>
               );
           })}
         </nav>
         <div className="sidebar-footer">
           <div className="project-meta">
-            <span>当前项目</span>
+            <span>{t("当前项目")}</span>
             <strong title={projectTitle}>{projectTitle}</strong>
           </div>
-          <button type="button" className="return-home-button" title="返回首页 / 新建想法" aria-label="返回首页 / 新建想法" onClick={onReturnHome}>
+          <LanguageSwitcher compact className="sidebar-language-switcher" />
+          <button type="button" className="return-home-button" title={t("返回首页 / 新建想法")} aria-label={t("返回首页 / 新建想法")} onClick={onReturnHome}>
             <Home size={16} />
-            <span>返回首页 / 新建想法</span>
+            <span>{t("返回首页 / 新建想法")}</span>
           </button>
-          <a className="return-home-button privacy-link-button" href="/privacy" target="_blank" rel="noreferrer" title="隐私政策" aria-label="隐私政策">
+          <a className="return-home-button privacy-link-button" href="/privacy" target="_blank" rel="noreferrer" title={t("隐私政策")} aria-label={t("隐私政策")}>
             <LockKeyhole size={16} />
-            <span>隐私政策</span>
+            <span>{t("隐私政策")}</span>
           </a>
           <a
             className="return-home-button privacy-link-button"
             href="https://github.com/tansuanyl/YumingScroll"
             target="_blank"
             rel="noreferrer"
-            title="查看源代码"
-            aria-label="查看源代码"
+            title={t("查看源代码")}
+            aria-label={t("查看源代码")}
           >
             <Code2 size={16} />
-            <span>源代码</span>
+            <span>{t("源代码")}</span>
           </a>
         </div>
       </aside>

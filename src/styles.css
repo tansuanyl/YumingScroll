@@ -175,6 +175,67 @@ button {
   max-width: 150px;
 }
 
+.language-switcher {
+  display: inline-grid;
+  grid-template-columns: 20px 36px 42px;
+  align-items: center;
+  min-height: 38px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.language-switcher > svg {
+  justify-self: center;
+}
+
+.language-switcher button {
+  min-width: 0;
+  height: 30px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.language-switcher button:hover {
+  color: white;
+}
+
+.language-switcher button.active {
+  background: rgba(255, 255, 255, 0.94);
+  color: #17111f;
+}
+
+.language-switcher-compact {
+  width: 48px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f4eee8;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.language-switcher-compact:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hero-language-switcher {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+}
+
 .balance-pill {
   min-height: 38px;
   display: inline-flex;
@@ -493,6 +554,17 @@ button {
 
 .privacy-link-button {
   margin-top: 8px;
+}
+
+.sidebar-language-switcher {
+  margin-top: 14px;
+}
+
+.privacy-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .workspace {
@@ -4687,6 +4759,10 @@ textarea {
   }
 
   .return-home-button {
+    width: 100%;
+  }
+
+  .language-switcher-compact {
     width: 100%;
   }
 

@@ -8,6 +8,7 @@ import {
 import { sanitizeSceneModelPromptText } from "../lib/sceneModelPromptText";
 import type { Project } from "../types/domain";
 import { AIImageGenerationPanel } from "./ui/ai-gen";
+import { useI18n } from "../i18n/I18nProvider";
 
 type SceneModelsProps = {
   project: Project;
@@ -22,6 +23,7 @@ export function SceneModels({
   onSave,
   onAssistantMessage
 }: SceneModelsProps) {
+  const { t } = useI18n();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [progressById, setProgressById] = useState<Record<string, number>>({});
   const progressTimers = useRef<Record<string, number>>({});
@@ -84,7 +86,7 @@ export function SceneModels({
       )
     };
     applyProject(clearedProject);
-    onAssistantMessage("Seedance 2.0 正在生成场景模型候选图...");
+    onAssistantMessage(t("Seedance 2.0 正在生成场景模型候选图..."));
     try {
       const syncedProject = await apiClient.saveProject(clearedProject);
       if (controller.signal.aborted) return;
@@ -96,10 +98,11 @@ export function SceneModels({
       if (controller.signal.aborted) return;
       await finishImageProgress(sceneModelId);
       applyProject(next);
-      onAssistantMessage("场景模型候选图已生成。请选择一张作为主场景图。");
+      onAssistantMessage(t("场景模型候选图已生成。请选择一张作为主场景图。"));
     } catch (error) {
       stopImageProgress(sceneModelId);
       if (controller.signal.aborted) return;
+      const message = t(error instanceof Error ? error.message : "场景图生成失败");
       const latestProject = projectRef.current;
       applyProject({
         ...latestProject,
@@ -110,13 +113,13 @@ export function SceneModels({
                 candidateImages: [],
                 confirmedImageId: undefined,
                 status: "failed" as const,
-                error: error instanceof Error ? error.message : "Image generation failed",
+                error: message,
                 generationRequestId: undefined
               }
             : model
         )
       });
-      onAssistantMessage(error instanceof Error ? error.message : "场景图生成失败");
+      onAssistantMessage(message);
     } finally {
       if (generationControllers.current[sceneModelId] === controller) {
         delete generationControllers.current[sceneModelId];
@@ -141,7 +144,7 @@ export function SceneModels({
     } catch {
       // Keep local cancellation visible if persistence has a transient failure.
     }
-    onAssistantMessage("场景模型候选图生成已取消。");
+    onAssistantMessage(t("场景模型候选图生成已取消。"));
   }
 
   async function confirm(modelId: string, assetId: string) {
@@ -152,20 +155,20 @@ export function SceneModels({
       )
     };
     onProjectChange(next);
-    await onSave(next, "场景主模型图已确认。");
+    await onSave(next, t("场景主模型图已确认。"));
   }
 
   return (
     <section className="page">
       <header className="page-header">
         <div>
-          <span className="eyebrow">场景模型 / Seedance 2.0</span>
-          <h1>确认场景模型图片</h1>
-          <p>先确认场景基底，再把它和人物模型图一起送入 15 秒视频生成。</p>
+          <span className="eyebrow">{t("场景模型 / Seedance 2.0")}</span>
+          <h1>{t("确认场景模型图片")}</h1>
+          <p>{t("先确认场景基底，再把它和人物模型图一起送入 15 秒视频生成。")}</p>
         </div>
-        <button type="button" className="secondary-button" onClick={() => void onSave(project, "场景模型状态已保存。")}>
+        <button type="button" className="secondary-button" onClick={() => void onSave(project, t("场景模型状态已保存。"))}>
           <Save size={17} />
-          保存
+          {t("保存")}
         </button>
       </header>
 
@@ -177,14 +180,14 @@ export function SceneModels({
             title={model.name}
             description={model.description}
             status={model.status}
-            promptLabel="场景图生成 Prompt"
+            promptLabel={t("场景图生成 Prompt")}
             prompt={sanitizeSceneModelPromptText(
               model.generationPrompt || "",
               project.characterModels.map((character) => character.name),
               model.description || model.name
             )}
-            promptPlaceholder="描述你希望生成的场景模型图，例如场景空间、光线、色彩、构图、画风、镜头质感。"
-            helperText="Seedance 生成场景候选图时会优先使用这里的 Prompt。"
+            promptPlaceholder={t("描述你希望生成的场景模型图，例如场景空间、光线、色彩、构图、画风、镜头质感。")}
+            helperText={t("Seedance 生成场景候选图时会优先使用这里的 Prompt。")}
             keywords={model.visualKeywords}
             candidates={model.candidateImages}
             confirmedImageId={model.confirmedImageId}

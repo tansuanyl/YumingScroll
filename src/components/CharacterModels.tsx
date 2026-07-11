@@ -8,6 +8,7 @@ import {
 import { updateCharacterConsistencyPrompt } from "../lib/modelPromptEdits";
 import type { Project } from "../types/domain";
 import { AIImageGenerationPanel } from "./ui/ai-gen";
+import { useI18n } from "../i18n/I18nProvider";
 
 type CharacterModelsProps = {
   project: Project;
@@ -22,6 +23,7 @@ export function CharacterModels({
   onSave,
   onAssistantMessage
 }: CharacterModelsProps) {
+  const { t } = useI18n();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [progressById, setProgressById] = useState<Record<string, number>>({});
   const progressTimers = useRef<Record<string, number>>({});
@@ -65,7 +67,7 @@ export function CharacterModels({
       )
     };
     applyProject(clearedProject);
-    onAssistantMessage("Seedance 2.0 正在生成人物模型候选图...");
+    onAssistantMessage(t("Seedance 2.0 正在生成人物模型候选图..."));
     try {
       const syncedProject = await apiClient.saveProject(clearedProject);
       if (controller.signal.aborted) return;
@@ -77,10 +79,11 @@ export function CharacterModels({
       if (controller.signal.aborted) return;
       await finishImageProgress(characterModelId);
       applyProject(next);
-      onAssistantMessage("人物模型候选图已生成。请选择一张作为主模型图。");
+      onAssistantMessage(t("人物模型候选图已生成。请选择一张作为主模型图。"));
     } catch (error) {
       stopImageProgress(characterModelId);
       if (controller.signal.aborted) return;
+      const message = t(error instanceof Error ? error.message : "人物图生成失败");
       const latestProject = projectRef.current;
       applyProject({
         ...latestProject,
@@ -91,13 +94,13 @@ export function CharacterModels({
                 candidateImages: [],
                 confirmedImageId: undefined,
                 status: "failed" as const,
-                error: error instanceof Error ? error.message : "Image generation failed",
+                error: message,
                 generationRequestId: undefined
               }
             : model
         )
       });
-      onAssistantMessage(error instanceof Error ? error.message : "人物图生成失败");
+      onAssistantMessage(message);
     } finally {
       if (generationControllers.current[characterModelId] === controller) {
         delete generationControllers.current[characterModelId];
@@ -122,7 +125,7 @@ export function CharacterModels({
     } catch {
       // Keep local cancellation visible if persistence has a transient failure.
     }
-    onAssistantMessage("人物模型候选图生成已取消。");
+    onAssistantMessage(t("人物模型候选图生成已取消。"));
   }
 
   function updateAspectRatio(modelId: string, imageAspectRatio: string) {
@@ -141,7 +144,7 @@ export function CharacterModels({
   async function savePrompt(modelId: string, consistencyPrompt: string) {
     const model = project.characterModels.find((item) => item.id === modelId);
     if (!model) return;
-    await onSave(updateCharacterConsistencyPrompt(project, modelId, consistencyPrompt), `${model.name} 人物一致性 Prompt 已保存。`);
+    await onSave(updateCharacterConsistencyPrompt(project, modelId, consistencyPrompt), t("{name} 人物一致性 Prompt 已保存。", { name: model.name }));
   }
 
   async function confirm(modelId: string, assetId: string) {
@@ -152,20 +155,20 @@ export function CharacterModels({
       )
     };
     onProjectChange(next);
-    await onSave(next, "人物主模型图已确认。");
+    await onSave(next, t("人物主模型图已确认。"));
   }
 
   return (
     <section className="page">
       <header className="page-header">
         <div>
-          <span className="eyebrow">人物模型 / Seedance 2.0</span>
-          <h1>确认人物模型图片</h1>
-          <p>每个角色先确认一张主模型图，后续视频镜头用它保持人物一致性。</p>
+          <span className="eyebrow">{t("人物模型 / Seedance 2.0")}</span>
+          <h1>{t("确认人物模型图片")}</h1>
+          <p>{t("每个角色先确认一张主模型图，后续视频镜头用它保持人物一致性。")}</p>
         </div>
-        <button type="button" className="secondary-button" onClick={() => void onSave(project, "人物模型状态已保存。")}>
+        <button type="button" className="secondary-button" onClick={() => void onSave(project, t("人物模型状态已保存。"))}>
           <Save size={17} />
-          保存
+          {t("保存")}
         </button>
       </header>
 
@@ -177,10 +180,10 @@ export function CharacterModels({
             title={model.name}
             description={model.description}
             status={model.status}
-            promptLabel="人物一致性 Prompt"
+            promptLabel={t("人物一致性 Prompt")}
             prompt={model.consistencyPrompt}
-            promptPlaceholder="补充人物外貌、年龄、性别、服装、体型、气质和防跑偏约束。"
-            helperText="人物模型图会作为后续视频片段的人物参考图。这里可直接修改 Prompt，生成候选图时会使用最新内容。"
+            promptPlaceholder={t("补充人物外貌、年龄、性别、服装、体型、气质和防跑偏约束。")}
+            helperText={t("人物模型图会作为后续视频片段的人物参考图。这里可直接修改 Prompt，生成候选图时会使用最新内容。")}
             candidates={model.candidateImages}
             confirmedImageId={model.confirmedImageId}
             aspectRatio={model.imageAspectRatio || "3:4"}

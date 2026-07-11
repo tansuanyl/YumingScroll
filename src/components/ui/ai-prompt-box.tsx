@@ -3,6 +3,7 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ArrowUp, Paperclip, Square, X, Mic, Globe, BrainCog, FolderCode, Sparkles } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useI18n } from "../../i18n/I18nProvider";
 
 const cn = (...classes: Array<string | undefined | null | false>) => classes.filter(Boolean).join(" ");
 
@@ -31,18 +32,19 @@ export const PromptInputBox = React.forwardRef<HTMLDivElement, PromptInputBoxPro
       onValueChange,
       onSend = () => {},
       isLoading = false,
-      placeholder = "输入提示词...",
+      placeholder,
       className,
       disabled = false,
       minHeight = 76,
       maxHeight = 420,
       clearOnSend = true,
       submitLabel,
-      submitTooltip = "发送给大模型",
-      attachTooltip = "上传图片"
+      submitTooltip,
+      attachTooltip
     },
     ref
   ) => {
+    const { t } = useI18n();
     const [internalValue, setInternalValue] = React.useState(value || "");
     const [files, setFiles] = React.useState<File[]>([]);
     const [filePreview, setFilePreview] = React.useState<string | null>(null);
@@ -52,6 +54,9 @@ export const PromptInputBox = React.forwardRef<HTMLDivElement, PromptInputBoxPro
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
     const currentValue = value ?? internalValue;
     const locked = disabled || isLoading;
+    const resolvedPlaceholder = placeholder || t("输入提示词...");
+    const resolvedSubmitTooltip = submitTooltip || t("发送给大模型");
+    const resolvedAttachTooltip = attachTooltip || t("上传图片");
 
     const resizeTextarea = React.useCallback(() => {
       const textarea = textareaRef.current;
@@ -121,7 +126,7 @@ export const PromptInputBox = React.forwardRef<HTMLDivElement, PromptInputBoxPro
                 className="group relative size-16 overflow-hidden rounded-xl"
                 onClick={() => setSelectedImage(filePreview)}
               >
-                <img src={filePreview} alt="上传图片预览" className="size-full object-cover" />
+                <img src={filePreview} alt={t("上传图片预览")} className="size-full object-cover" />
                 <span
                   className="absolute right-1 top-1 grid size-5 place-items-center rounded-full bg-black/70"
                   onClick={(event) => {
@@ -142,12 +147,12 @@ export const PromptInputBox = React.forwardRef<HTMLDivElement, PromptInputBoxPro
             disabled={locked}
             placeholder={
               mode === "search"
-                ? "联网搜索式提示词..."
+                ? t("联网搜索式提示词...")
                 : mode === "think"
-                  ? "深度推理式提示词..."
+                  ? t("深度推理式提示词...")
                   : mode === "canvas"
-                    ? "画布创作式提示词..."
-                    : placeholder
+                    ? t("画布创作式提示词...")
+                    : resolvedPlaceholder
             }
             onChange={(event) => {
               updateValue(event.target.value);
@@ -166,7 +171,7 @@ export const PromptInputBox = React.forwardRef<HTMLDivElement, PromptInputBoxPro
 
           <div className="flex items-center justify-between gap-2 pt-2">
             <div className="flex min-w-0 items-center gap-1">
-              <TooltipButton label={attachTooltip}>
+              <TooltipButton label={resolvedAttachTooltip}>
                 <button
                   type="button"
                   className="grid size-8 place-items-center rounded-full text-gray-400 transition-colors hover:bg-gray-600/30 hover:text-gray-200 disabled:cursor-not-allowed"
@@ -199,7 +204,7 @@ export const PromptInputBox = React.forwardRef<HTMLDivElement, PromptInputBoxPro
               </ModeButton>
             </div>
 
-            <TooltipButton label={isLoading ? "停止生成" : hasContent ? submitTooltip : "语音输入"}>
+            <TooltipButton label={isLoading ? t("停止生成") : hasContent ? resolvedSubmitTooltip : t("语音输入")}>
               <button
                 type="button"
                 className={cn(
@@ -300,6 +305,7 @@ function ModeButton({
 }
 
 function ImageDialog({ imageUrl, onClose }: { imageUrl: string | null; onClose: () => void }) {
+  const { t } = useI18n();
   if (!imageUrl) return null;
 
   return (
@@ -307,8 +313,8 @@ function ImageDialog({ imageUrl, onClose }: { imageUrl: string | null; onClose: 
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
         <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 w-[90vw] max-w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-[#1f2023] p-0 shadow-xl">
-          <DialogPrimitive.Title className="sr-only">图片预览</DialogPrimitive.Title>
-          <img src={imageUrl} alt="完整图片预览" className="max-h-[80vh] w-full rounded-2xl object-contain" />
+          <DialogPrimitive.Title className="sr-only">{t("图片预览")}</DialogPrimitive.Title>
+          <img src={imageUrl} alt={t("完整图片预览")} className="max-h-[80vh] w-full rounded-2xl object-contain" />
           <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full bg-[#2e3033]/80 p-2 hover:bg-[#2e3033]">
             <X className="size-5 text-gray-200" />
           </DialogPrimitive.Close>
