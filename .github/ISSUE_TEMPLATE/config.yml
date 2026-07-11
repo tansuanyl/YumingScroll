@@ -1,1 +1,8 @@
 blank_issues_enabled: false
+contact_links:
+  - name: 使用问题与部署交流
+    url: https://github.com/tansuanyl/YumingScroll/discussions/categories/q-a
+    about: 不确定是否为缺陷时，请先在 Q&A 中提问。
+  - name: 安全漏洞报告
+    url: https://github.com/tansuanyl/YumingScroll/security/policy
+    about: 请私下报告安全问题，不要在公开 Issue 中披露漏洞或敏感信息。

@@ -1,6 +1,9 @@
 name: Bug report
 description: 报告可复现的功能问题
 title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
 body:
   - type: markdown
     attributes:
@@ -30,6 +33,21 @@ body:
     validations:
       required: true
   - type: dropdown
+    id: area
+    attributes:
+      label: 影响模块
+      options:
+        - Story / 分镜脚本
+        - Flow Map
+        - 图片或视频生成
+        - Gallery / 资产管理
+        - 账号、权限或计费
+        - Provider / API 配置
+        - 部署、数据库或存储
+        - 其他
+    validations:
+      required: true
+  - type: dropdown
     id: storage
     attributes:
       label: 项目存储
@@ -48,6 +66,14 @@ body:
         - Real provider
         - Mixed
         - 不确定
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      description: 请填写操作系统、Node.js、浏览器和部署方式；不要粘贴完整环境变量。
+      placeholder: macOS 15 / Node.js 22 / Chrome / Docker Compose
     validations:
       required: true
   - type: textarea

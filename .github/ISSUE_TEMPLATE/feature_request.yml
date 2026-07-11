@@ -1,7 +1,26 @@
 name: Feature request
 description: 建议新的工作流、Provider 或创作能力
 title: "[Feature]: "
+labels:
+  - enhancement
+  - needs-triage
 body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: 相关模块
+      options:
+        - Story / 分镜脚本
+        - Flow Map
+        - 图片或视频生成
+        - Gallery / 资产管理
+        - 账号、权限或计费
+        - Provider / API 配置
+        - 部署、数据库或存储
+        - 文档或开发者体验
+        - 其他
+    validations:
+      required: true
   - type: textarea
     id: use-case
     attributes:
@@ -14,6 +33,13 @@ body:
     attributes:
       label: 建议方案
       description: 描述期望的交互、输入、输出和边界。
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: 预期收益
+      description: 这个改动会改善哪些用户体验或创作结果？
     validations:
       required: true
   - type: textarea
