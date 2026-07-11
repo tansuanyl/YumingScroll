@@ -9,6 +9,8 @@ import {
 } from "../lib/generationCancellation";
 import { SOURCE_IMPORT_ACCEPT, SOURCE_IMPORT_MAX_FILE_BYTES, buildSourceFilePayload } from "../lib/sourceImportFile";
 import type { Project } from "../types/domain";
+import { useI18n } from "../i18n/I18nProvider";
+import type { TranslationValues } from "../i18n/messages";
 
 type InputSection = "inspiration" | "world" | "outline";
 type TextCreationMode = "brief" | "source";
@@ -69,6 +71,7 @@ export function TextCreation({
   onSave,
   onAssistantMessage
 }: TextCreationProps) {
+  const { t, formatNumber } = useI18n();
   const [draft, setDraft] = useState(project);
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<TextCreationMode>("brief");
@@ -242,8 +245,7 @@ export function TextCreation({
       return recoverCompletedGeneratedProject(projectId, startedAt, recoveredMessage, { signal: controller.signal });
     }
 
-    const waitingDetail =
-      "请求被网关超时截断，但后端可能仍在生成并保存结果。正在持续检查项目结果，你也可以点“取消生成”停止等待。";
+    const waitingDetail = t("请求被网关超时截断，但后端可能仍在生成并保存结果。正在持续检查项目结果，你也可以点“取消生成”停止等待。");
     onAssistantMessage(waitingDetail);
     return recoverCompletedGeneratedProject(projectId, startedAt, recoveredMessage, {
       signal: controller.signal,
@@ -302,7 +304,7 @@ export function TextCreation({
             };
 
     updateProject(next);
-    onAssistantMessage(`${activeMeta?.label || "输入"}已保存到当前项目。`);
+    onAssistantMessage(t("{label}已保存到当前项目。", { label: t(activeMeta?.label || "输入") }));
     closeModal();
   }
 
@@ -314,8 +316,8 @@ export function TextCreation({
     generationRequestIdRef.current = generationRequestId;
     const generatingDraft = startTextGeneration(draft, generationRequestId);
     updateProject(generatingDraft);
-    beginGeneration(`${activeTextModel.label} 正在生成角色、剧本、分镜和 Seedance 2.0 分镜脚本...`, startedAt);
-    onAssistantMessage(`已确认故事灵感、世界观和剧情大纲。${activeTextModel.label} 正在生成角色、剧本、分镜和 Seedance 2.0 分镜脚本...`);
+    beginGeneration(t("{model} 正在生成角色、剧本、分镜和 Seedance 2.0 分镜脚本...", { model: activeTextModel.label }), startedAt);
+    onAssistantMessage(t("已确认故事灵感、世界观和剧情大纲。{model} 正在生成角色、剧本、分镜和 Seedance 2.0 分镜脚本...", { model: activeTextModel.label }));
     let textRequestSubmitted = false;
     try {
       const syncedProject = await apiClient.saveProject(generatingDraft);
@@ -336,16 +338,16 @@ export function TextCreation({
       if (controller.signal.aborted) return;
       setDraft(next);
       onProjectChange(next);
-      onAssistantMessage("文本生成完成。大模型已基于无现成小说模式的三项输入生成结构化结果。");
+      onAssistantMessage(t("文本生成完成。大模型已基于无现成小说模式的三项输入生成结构化结果。"));
     } catch (error) {
       if (controller.signal.aborted) return;
-      const errorMessage = getGenerationErrorMessage(error, "文本生成失败");
+      const errorMessage = t(getGenerationErrorMessage(error, "文本生成失败"));
       const recovered = textRequestSubmitted
         ? await recoverAfterGenerationError(
             generatingDraft.id,
             startedAt,
             errorMessage,
-            "后端已完成文本生成，已恢复到当前文本工作台。",
+            t("后端已完成文本生成，已恢复到当前文本工作台。"),
             controller
           )
         : false;
@@ -359,8 +361,8 @@ export function TextCreation({
   async function importSource() {
     if (!sourceText.trim() && !sourceFile) return;
     const sourceSizeLabel = sourceFile
-      ? `${sourceFile.name}，约 ${sourceFileSizeMb.toFixed(1)} MB`
-      : `${sourceInputCharacters.toLocaleString()} 字正文`;
+      ? t("{file}，约 {size} MB", { file: sourceFile.name, size: sourceFileSizeMb.toFixed(1) })
+      : t("{count} 字正文", { count: formatNumber(sourceInputCharacters) });
     const generationRequestId = createGenerationRequestId("storyboard-source", draft.id);
     const controller = new AbortController();
     const startedAt = Date.now();
@@ -368,8 +370,8 @@ export function TextCreation({
     generationRequestIdRef.current = generationRequestId;
     const generatingDraft = startTextGeneration(draft, generationRequestId);
     updateProject(generatingDraft);
-    beginGeneration(`${activeTextModel.label} 正在读取导入内容...`, startedAt);
-    onAssistantMessage(`${activeTextModel.label} 正在读取导入的小说/文档，并直接生成后续剧本、分镜和 Seedance 2.0 分镜脚本...`);
+    beginGeneration(t("{model} 正在读取导入内容...", { model: activeTextModel.label }), startedAt);
+    onAssistantMessage(t("{model} 正在读取导入的小说/文档，并直接生成后续剧本、分镜和 Seedance 2.0 分镜脚本...", { model: activeTextModel.label }));
     let textRequestSubmitted = false;
     try {
       const syncedProject = await apiClient.saveProject(generatingDraft);
@@ -378,7 +380,7 @@ export function TextCreation({
       const uploadedFile = sourceFile ? await buildSourceFilePayload(sourceFile) : undefined;
       if (controller.signal.aborted) return;
       setGenerationDetail(
-        `${activeTextModel.label} 已提交 ${sourceSizeLabel}。正在清洗作者互动、提取人物并压缩生成 15 秒分段分镜，长篇会优先稳定产出第一版。`
+        t("{model} 已提交 {size}。正在清洗作者互动、提取人物并压缩生成 15 秒分段分镜，长篇会优先稳定产出第一版。", { model: activeTextModel.label, size: sourceSizeLabel })
       );
       textRequestSubmitted = true;
       const next = await apiClient.importSource(generatingDraft.id, {
@@ -395,16 +397,16 @@ export function TextCreation({
       onProjectChange(next);
       setSourceText("");
       setSourceFile(null);
-      onAssistantMessage(`小说/文档导入完成。${activeTextModel.label} 已基于原文生成后续剧本、分镜和 Seedance 2.0 分镜脚本。`);
+      onAssistantMessage(t("小说/文档导入完成。{model} 已基于原文生成后续剧本、分镜和 Seedance 2.0 分镜脚本。", { model: activeTextModel.label }));
     } catch (error) {
       if (controller.signal.aborted) return;
-      const errorMessage = getGenerationErrorMessage(error, "小说/文档导入生成失败");
+      const errorMessage = t(getGenerationErrorMessage(error, "小说/文档导入生成失败"));
       const recovered = textRequestSubmitted
         ? await recoverAfterGenerationError(
             generatingDraft.id,
             startedAt,
             errorMessage,
-            "后端已完成小说/文档导入，已恢复到当前文本工作台。",
+            t("后端已完成小说/文档导入，已恢复到当前文本工作台。"),
             controller
           )
         : false;
@@ -427,7 +429,7 @@ export function TextCreation({
     } catch {
       // Keep local cancellation visible if persistence has a transient failure.
     }
-    onAssistantMessage("分镜脚本生成已取消。");
+    onAssistantMessage(t("分镜脚本生成已取消。"));
   }
 
   function generateFromCurrentMode() {
@@ -446,29 +448,29 @@ export function TextCreation({
     <section className="page text-creation-page">
       <header className="page-header">
         <div>
-          <span className="eyebrow">文本创作 / 双模型</span>
-          <h1>文本制作工作台</h1>
-          <p>先选择输入模式，再生成可编辑的 Seedance 2.0 分镜脚本。</p>
+          <span className="eyebrow">{t("文本创作 / 双模型")}</span>
+          <h1>{t("文本制作工作台")}</h1>
+          <p>{t("先选择输入模式，再生成可编辑的 Seedance 2.0 分镜脚本。")}</p>
         </div>
         <div className="action-row">
-          <button type="button" className="secondary-button" onClick={() => void onSave(draft, "文本修改已保存。")}>
+          <button type="button" className="secondary-button" onClick={() => void onSave(draft, t("文本修改已保存。"))}>
             <Save size={17} />
-            保存
+            {t("保存")}
           </button>
         </div>
       </header>
 
       <div className="text-mode-switch-row">
-        <div className="text-mode-switch" aria-label="文本创作模式">
+        <div className="text-mode-switch" aria-label={t("文本创作模式")}>
           <button type="button" className={mode === "brief" ? "active" : ""} onClick={() => setMode("brief")}>
-            无现成小说模式
+            {t("无现成小说模式")}
           </button>
           <button type="button" className={mode === "source" ? "active" : ""} onClick={() => setMode("source")}>
-            已有小说模式
+            {t("已有小说模式")}
           </button>
         </div>
-        <div className="text-model-switch" aria-label="文本与 Prompt 优化模型">
-          <span className="text-model-label">文本 / Prompt 优化模型</span>
+        <div className="text-model-switch" aria-label={t("文本与 Prompt 优化模型")}>
+          <span className="text-model-label">{t("文本 / Prompt 优化模型")}</span>
           {textModelOptions.map((option) => (
             <button
               type="button"
@@ -478,22 +480,22 @@ export function TextCreation({
               disabled={busy}
             >
               <strong>{option.label}</strong>
-              <small>{option.sub}</small>
+              <small>{t(option.sub)}</small>
             </button>
           ))}
         </div>
       </div>
 
-      <section className="visual-style-panel" aria-label="画面风格选择">
+      <section className="visual-style-panel" aria-label={t("画面风格选择")}>
         <div className="visual-style-heading">
           <div>
             <span>
               <Palette size={15} />
-              画面风格
+              {t("画面风格")}
             </span>
-            <strong>{activeVisualStyle.label}</strong>
+            <strong>{t(activeVisualStyle.label)}</strong>
           </div>
-          <p>锁定本次文本生成的视觉基调，后续人物模型、场景模型、分镜和视频 Prompt 会沿用这个方向。</p>
+          <p>{t("锁定本次文本生成的视觉基调，后续人物模型、场景模型、分镜和视频 Prompt 会沿用这个方向。")}</p>
         </div>
         <div className="visual-style-grid">
           {visualStylePresets.map((option) => {
@@ -521,7 +523,8 @@ export function TextCreation({
                     <img
                       src={option.thumbnail}
                       alt=""
-                      loading={active ? "eager" : "lazy"}
+                      loading="eager"
+                      fetchPriority={active ? "high" : "auto"}
                       decoding="async"
                       width={180}
                       height={120}
@@ -540,11 +543,11 @@ export function TextCreation({
                   )}
                 </span>
                 <span className="visual-style-copy">
-                  <strong>{option.label}</strong>
-                  <small>{option.sub}</small>
+                  <strong>{t(option.label)}</strong>
+                  <small>{t(option.sub)}</small>
                 </span>
                 {active ? (
-                  <em aria-label="已选择">
+                  <em aria-label={t("已选择")}>
                     <Check size={14} />
                   </em>
                 ) : null}
@@ -556,7 +559,7 @@ export function TextCreation({
 
       <div className="text-creation-layout">
         {mode === "brief" ? (
-          <section className="brief-node-grid" aria-label="无现成小说模式输入项">
+          <section className="brief-node-grid" aria-label={t("无现成小说模式输入项")}>
             {briefInputSections.map((item) => {
               const Icon = item.icon;
               const status = getSectionStatus(item.key);
@@ -570,14 +573,14 @@ export function TextCreation({
                 >
                   <header>
                     <div>
-                      <strong>{item.label}</strong>
-                      <small>{item.sub}</small>
+                      <strong>{t(item.label)}</strong>
+                      <small>{t(item.sub)}</small>
                     </div>
                     <span>{item.code}</span>
                   </header>
                   <div className="brief-node-preview">
                     <Icon size={26} />
-                    <p>{body || item.placeholder}</p>
+                    <p>{body || t(item.placeholder)}</p>
                   </div>
                   <em>{status === "ready" ? "ready" : "idle"}</em>
                 </button>
@@ -588,22 +591,22 @@ export function TextCreation({
           <article className="content-card source-import-card source-mode-panel">
             <div className="source-import-heading">
               <div>
-                <label>小说 / 文档导入</label>
-                <p>上传文档文件，或直接粘贴小说正文。系统会从原文中提取世界观、角色和剧情推进，并生成后续剧本与 Seedance 分镜脚本。</p>
+                <label>{t("小说 / 文档导入")}</label>
+                <p>{t("上传文档文件，或直接粘贴小说正文。系统会从原文中提取世界观、角色和剧情推进，并生成后续剧本与 Seedance 分镜脚本。")}</p>
               </div>
               <span>{activeTextModel.label}</span>
             </div>
             <div className="source-import-actions">
               <label className="source-file-button">
                 <Upload size={16} />
-                上传文档
+                {t("上传文档")}
                 <input
                   type="file"
                   accept={SOURCE_IMPORT_ACCEPT}
                   onChange={(event) => {
                     const file = event.target.files?.[0] || null;
                     if (file && file.size > SOURCE_IMPORT_MAX_FILE_BYTES) {
-                      onAssistantMessage("文档超过 8MB，请拆分后上传，或先粘贴关键章节文本。");
+                      onAssistantMessage(t("文档超过 8MB，请拆分后上传，或先粘贴关键章节文本。"));
                       event.currentTarget.value = "";
                       return;
                     }
@@ -611,13 +614,13 @@ export function TextCreation({
                   }}
                 />
               </label>
-              <span>{sourceFile ? sourceFile.name : "支持 txt / md / docx，也可直接粘贴正文"}</span>
+              <span>{sourceFile ? sourceFile.name : t("支持 txt / md / docx，也可直接粘贴正文")}</span>
             </div>
             <textarea
               className="source-import-textarea source-novel-textarea"
               value={sourceText}
               onChange={(event) => setSourceText(event.target.value)}
-              placeholder="在这里粘贴小说正文、章节内容或完整故事文本。"
+              placeholder={t("在这里粘贴小说正文、章节内容或完整故事文本。")}
             />
           </article>
         )}
@@ -625,8 +628,8 @@ export function TextCreation({
         <article className="content-card script-generation-card">
           <div className="script-generation-header">
             <div>
-              <label>Seedance 2.0 分镜脚本</label>
-              <p>这是两种模式生成后的统一输出区。你可以直接编辑，再进入 Flow Map 生成视频。</p>
+              <label>{t("Seedance 2.0 分镜脚本")}</label>
+              <p>{t("这是两种模式生成后的统一输出区。你可以直接编辑，再进入 Flow Map 生成视频。")}</p>
             </div>
             <button
               type="button"
@@ -636,19 +639,19 @@ export function TextCreation({
             >
               {busy ? <X size={17} /> : <Sparkles size={17} />}
               {busy
-                ? "取消生成"
+                ? t("取消生成")
                 : mode === "brief"
-                  ? "生成 Seedance 分镜脚本"
-                  : "用小说生成分镜脚本"}
+                  ? t("生成 Seedance 分镜脚本")
+                  : t("用小说生成分镜脚本")}
             </button>
           </div>
           {busy && generationStartedAt ? (
             <div className="text-generation-progress" role="status" aria-live="polite">
               <div>
-                <strong>{generationDetail || "正在生成文本内容..."}</strong>
+                <strong>{generationDetail || t("正在生成文本内容...")}</strong>
                 <span>{formatElapsedSeconds(elapsedSeconds)}</span>
               </div>
-              <p>{buildGenerationHint(mode, activeTextModel.label, elapsedSeconds)}</p>
+              <p>{buildGenerationHint(mode, activeTextModel.label, elapsedSeconds, t)}</p>
             </div>
           ) : generationError ? (
             <div className="text-generation-progress text-generation-progress-error" role="alert">
@@ -656,18 +659,18 @@ export function TextCreation({
                 <strong>{generationError}</strong>
                 <span>failed</span>
               </div>
-              <p>这次生成没有写入分镜脚本。请保留当前小说正文后重试；如果后端稍后完成，刷新项目会自动显示已保存结果。</p>
+              <p>{t("这次生成没有写入分镜脚本。请保留当前小说正文后重试；如果后端稍后完成，刷新项目会自动显示已保存结果。")}</p>
             </div>
           ) : mode === "source" && canGenerateFromSource ? (
             <div className={`text-generation-progress text-generation-progress-idle${isLongSourceInput ? " is-long" : ""}`}>
               <div>
-                <strong>{isLongSourceInput ? "长篇导入会比普通文本更久" : "准备好后可开始生成"}</strong>
-                <span>{sourceFile ? `${sourceFileSizeMb.toFixed(1)} MB` : `${sourceInputCharacters.toLocaleString()} 字`}</span>
+                <strong>{isLongSourceInput ? t("长篇导入会比普通文本更久") : t("准备好后可开始生成")}</strong>
+                <span>{sourceFile ? `${sourceFileSizeMb.toFixed(1)} MB` : t("{count} 字", { count: formatNumber(sourceInputCharacters) })}</span>
               </div>
               <p>
                 {isLongSourceInput
-                  ? "系统会把长篇压缩成可编辑的 15 秒片段第一版；需要更细时可拆分章节继续导入。"
-                  : "系统会基于导入内容直接生成世界观、人物、分镜和 Seedance 2.0 分镜脚本。"}
+                  ? t("系统会把长篇压缩成可编辑的 15 秒片段第一版；需要更细时可拆分章节继续导入。")
+                  : t("系统会基于导入内容直接生成世界观、人物、分镜和 Seedance 2.0 分镜脚本。")}
               </p>
             </div>
           ) : null}
@@ -680,7 +683,7 @@ export function TextCreation({
                 storyState: { ...draft.storyState, seedanceScript: event.target.value }
               })
             }
-            placeholder="生成后会在这里显示 Seedance 2.0 分镜脚本。也可以手动粘贴或修改。"
+            placeholder={t("生成后会在这里显示 Seedance 2.0 分镜脚本。也可以手动粘贴或修改。")}
           />
         </article>
 
@@ -698,10 +701,10 @@ export function TextCreation({
             <header>
               <div>
                 <span>{activeMeta.code}</span>
-                <h2 id="text-input-modal-title">{activeMeta.label}</h2>
-                <p>{activeMeta.sub}</p>
+                <h2 id="text-input-modal-title">{t(activeMeta.label)}</h2>
+                <p>{t(activeMeta.sub)}</p>
               </div>
-              <button type="button" className="workflow-dialog-close" onClick={closeModal} aria-label="关闭输入弹窗">
+              <button type="button" className="workflow-dialog-close" onClick={closeModal} aria-label={t("关闭输入弹窗")}>
                 <X size={18} />
               </button>
             </header>
@@ -709,22 +712,22 @@ export function TextCreation({
               <input
                 value={modalTitle}
                 onChange={(event) => setModalTitle(event.target.value)}
-                placeholder="世界观标题，例如：第十三层档案馆"
+                placeholder={t("世界观标题，例如：第十三层档案馆")}
               />
             ) : null}
             <textarea
               value={modalValue}
               onChange={(event) => setModalValue(event.target.value)}
-              placeholder={activeMeta.placeholder}
+              placeholder={t(activeMeta.placeholder)}
               autoFocus
             />
             <div className="text-input-modal-actions">
               <button type="button" className="secondary-button" onClick={closeModal}>
-                取消
+                {t("取消")}
               </button>
               <button type="button" className="primary-button" disabled={busy || !modalValue.trim()} onClick={applyModalInput}>
                 <Sparkles size={17} />
-                保存输入
+                {t("保存输入")}
               </button>
             </div>
           </section>
@@ -740,22 +743,27 @@ function formatElapsedSeconds(seconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
 }
 
-function buildGenerationHint(mode: TextCreationMode, modelLabel: string, seconds: number): string {
+function buildGenerationHint(
+  mode: TextCreationMode,
+  modelLabel: string,
+  seconds: number,
+  t: (source: string, values?: TranslationValues) => string
+): string {
   if (mode !== "source") {
-    return "正在等待模型返回结构化 JSON。完成后会自动刷新文本结果。";
+    return t("正在等待模型返回结构化 JSON。完成后会自动刷新文本结果。");
   }
 
   if (seconds >= 360) {
-    return `${modelLabel} 长篇处理已经超过 6 分钟，系统仍在等待模型或后端兜底结果；如果最终超时，会给出明确错误提示。`;
+    return t("{model} 长篇处理已经超过 6 分钟，系统仍在等待模型或后端兜底结果；如果最终超时，会给出明确错误提示。", { model: modelLabel });
   }
 
   if (seconds >= 180) {
-    return `${modelLabel} 仍在分析长文本。完整小说会先清洗作者互动、抽取人物和关键剧情，再生成 15 秒分段。`;
+    return t("{model} 仍在分析长文本。完整小说会先清洗作者互动、抽取人物和关键剧情，再生成 15 秒分段。", { model: modelLabel });
   }
 
   if (seconds >= 60) {
-    return "长篇小说生成不是卡死，通常会持续数分钟；请不要重复点击或刷新页面。";
+    return t("长篇小说生成不是卡死，通常会持续数分钟；请不要重复点击或刷新页面。");
   }
 
-  return "请求已提交，页面保持打开即可；国内网络环境下长文本模型调用可能需要等待一段时间。";
+  return t("请求已提交，页面保持打开即可；国内网络环境下长文本模型调用可能需要等待一段时间。");
 }

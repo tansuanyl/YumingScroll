@@ -1,4 +1,5 @@
 import type { MediaProviderStatus, TextModelSelection, TextProviderStatus } from "./apiClient";
+import type { TranslationValues } from "../i18n/messages";
 
 export const PROVIDER_CONFIGURATION_GUIDE_URL =
   "https://github.com/tansuanyl/YumingScroll#配置真实-ai-服务";
@@ -22,7 +23,8 @@ const MODEL_LABELS: Record<TextModelSelection, string> = {
 
 export function getProviderReadiness(
   snapshot: ProviderStatusSnapshot | null,
-  selectedModel: TextModelSelection
+  selectedModel: TextModelSelection,
+  translate: (source: string, values?: TranslationValues) => string = interpolateMessage
 ): ProviderReadiness | null {
   if (!snapshot) return null;
 
@@ -33,8 +35,8 @@ export function getProviderReadiness(
   if (!selectedTextModelReady) {
     return {
       tone: "blocked",
-      title: `${MODEL_LABELS[selectedModel]} 尚未配置`,
-      detail: "请先在服务端配置所选文本模型的 Provider Key 并重启 API。密钥不应填写在浏览器或任何公开环境变量中。",
+      title: translate("{model} 尚未配置", { model: MODEL_LABELS[selectedModel] }),
+      detail: translate("请先在服务端配置所选文本模型的 Provider Key 并重启 API。密钥不应填写在浏览器或任何公开环境变量中。"),
       blockTextGeneration: true
     };
   }
@@ -42,8 +44,8 @@ export function getProviderReadiness(
   if (snapshot.text.mode === "mock" || snapshot.media.mode === "mock") {
     return {
       tone: "warning",
-      title: "当前为 Mock 演示模式",
-      detail: "Mock 输出只用于验证界面和工作流，不代表真实模型效果。评估生成质量前，请关闭 Mock 并配置文本与媒体 Provider API Key。",
+      title: translate("当前为 Mock 演示模式"),
+      detail: translate("Mock 输出只用于验证界面和工作流，不代表真实模型效果。评估生成质量前，请关闭 Mock 并配置文本与媒体 Provider API Key。"),
       blockTextGeneration: false
     };
   }
@@ -51,16 +53,23 @@ export function getProviderReadiness(
   if (snapshot.media.mode !== "live") {
     return {
       tone: "warning",
-      title: "图片与视频 Provider 尚未配置",
-      detail: "文本生成已经可用，但后续图片和视频会无法生成。请先在服务端配置媒体 Provider Key 并重启 API。",
+      title: translate("图片与视频 Provider 尚未配置"),
+      detail: translate("文本生成已经可用，但后续图片和视频会无法生成。请先在服务端配置媒体 Provider Key 并重启 API。"),
       blockTextGeneration: false
     };
   }
 
   return {
     tone: "ready",
-    title: "真实 AI Provider 已就绪",
-    detail: "文本、图片和视频生成将调用服务端 Provider；API Key 只保存在服务端环境变量中。",
+    title: translate("真实 AI Provider 已就绪"),
+    detail: translate("文本、图片和视频生成将调用服务端 Provider；API Key 只保存在服务端环境变量中。"),
     blockTextGeneration: false
   };
+}
+
+function interpolateMessage(source: string, values: TranslationValues = {}): string {
+  return source.replace(/\{(\w+)\}/g, (match, key: string) => {
+    const value = values[key];
+    return value === undefined ? match : String(value);
+  });
 }

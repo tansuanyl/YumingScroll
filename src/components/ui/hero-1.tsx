@@ -4,6 +4,8 @@ import type { TextModelSelection } from "../../lib/apiClient";
 import { PROVIDER_CONFIGURATION_GUIDE_URL, type ProviderReadiness } from "../../lib/providerReadiness";
 import { SOURCE_IMPORT_ACCEPT } from "../../lib/sourceImportFile";
 import { BrandMark } from "../BrandMark";
+import { LanguageSwitcher } from "../LanguageSwitcher";
+import { useI18n } from "../../i18n/I18nProvider";
 
 type Hero1Props = {
   isLoading?: boolean;
@@ -22,14 +24,6 @@ const textModelOptions: Array<{ value: TextModelSelection; label: string; sub: s
   { value: "kimi-k2.6", label: "Kimi K2.6", sub: "Cost / Moonshot" }
 ];
 
-const suggestions = [
-  "悬疑短剧：失踪刑警进入不存在的第十三层档案馆",
-  "赛博朋克恋爱：雨夜芯片唤醒两人的共同记忆",
-  "都市怪谈：深夜末班车出现不存在的第七名乘客",
-  "国漫悬疑：旧警局档案楼里的红色 13 按钮",
-  "双男主追逃：宿敌在副本中发现被删除的过去"
-];
-
 const Hero1 = ({
   isLoading = false,
   errorMessage = null,
@@ -41,6 +35,7 @@ const Hero1 = ({
   onSubmit,
   onImportSourceFile
 }: Hero1Props) => {
+  const { t } = useI18n();
   const [prompt, setPrompt] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
   const sourceFileInputRef = React.useRef<HTMLInputElement>(null);
@@ -51,6 +46,13 @@ const Hero1 = ({
       : providerReadiness?.tone === "blocked"
         ? KeyRound
         : AlertTriangle;
+  const suggestions = [
+    t("悬疑短剧：失踪刑警进入不存在的第十三层档案馆"),
+    t("赛博朋克恋爱：雨夜芯片唤醒两人的共同记忆"),
+    t("都市怪谈：深夜末班车出现不存在的第七名乘客"),
+    t("国漫悬疑：旧警局档案楼里的红色 13 按钮"),
+    t("双男主追逃：宿敌在副本中发现被删除的过去")
+  ];
 
   function submit(nextPrompt = prompt) {
     const value = nextPrompt.trim();
@@ -79,17 +81,18 @@ const Hero1 = ({
               type="button"
               className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
               onClick={onOpenWorkbench}
-              aria-label={currentProjectTitle ? "进入当前项目文本创作工作台" : "进入文本创作工作台"}
+              aria-label={currentProjectTitle ? t("进入当前项目文本创作工作台") : t("进入文本创作工作台")}
             >
               <FileText className="size-4" />
-              <span>文本创作工作台</span>
+              <span>{t("文本创作工作台")}</span>
             </button>
           ) : null}
+          <LanguageSwitcher className="hero-language-switcher" />
           <button
             className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-gray-200"
             onClick={() => inputRef.current?.focus()}
           >
-            开始创作
+            {t("开始创作")}
           </button>
         </div>
       </header>
@@ -98,18 +101,18 @@ const Hero1 = ({
         <div className="mx-auto w-full max-w-4xl space-y-7">
           <div className="flex justify-center">
             <div className="w-fit rounded-full bg-[#1c1528] px-4 py-2 text-xs text-white/80 ring-1 ring-white/10">
-              从一个想法开始，生成文本、模型图和视频 Flow Map
+              {t("从一个想法开始，生成文本、模型图和视频 Flow Map")}
             </div>
           </div>
 
           <h1 className="text-4xl font-bold leading-tight sm:text-6xl">
-            输入你的漫剧初想法
+            {t("输入你的漫剧初想法")}
             <br />
-            让 AI 生成第一版创作工作台
+            {t("让 AI 生成第一版创作工作台")}
           </h1>
 
           <p className="mx-auto max-w-2xl text-base leading-7 text-white/68">
-            描述题材、人物关系、核心悬念或画面风格。系统会先进入文本创作页，生成世界观、剧情大纲、分镜和 Seedance 2.0 分镜脚本。
+            {t("描述题材、人物关系、核心悬念或画面风格。系统会先进入文本创作页，生成世界观、剧情大纲、分镜和 Seedance 2.0 分镜脚本。")}
           </p>
 
           {providerReadiness ? (
@@ -137,7 +140,7 @@ const Hero1 = ({
                 target="_blank"
                 rel="noreferrer"
               >
-                配置指南
+                {t("配置指南")}
                 <ExternalLink className="size-3.5" />
               </a>
             </div>
@@ -150,7 +153,7 @@ const Hero1 = ({
                 className="grid size-10 place-items-center rounded-full text-gray-400 transition hover:bg-[#2a1f3d]"
                 disabled={isLoading || generationBlocked}
                 onClick={() => sourceFileInputRef.current?.click()}
-                aria-label="导入小说或文本文件"
+                aria-label={t("导入小说或文本文件")}
               >
                 <Paperclip className="size-5" />
               </button>
@@ -171,7 +174,7 @@ const Hero1 = ({
                 className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-purple-500 px-3 text-xs font-semibold text-white transition hover:bg-purple-400 disabled:cursor-not-allowed disabled:opacity-70"
                 onClick={() => submit()}
                 disabled={isLoading || generationBlocked}
-                aria-label={generationBlocked ? "请先配置所选文本模型 API Key" : "生成初版文本"}
+                aria-label={generationBlocked ? t("请先配置所选文本模型 API Key") : t("生成初版文本")}
               >
                 {isLoading ? (
                   <Loader2 className="size-5 animate-spin" />
@@ -181,7 +184,7 @@ const Hero1 = ({
                   <Sparkles className="size-5" />
                 )}
                 <span className="hidden sm:inline">
-                  {isLoading ? "生成中" : generationBlocked ? "请先配置 API" : "生成初版"}
+                  {isLoading ? t("生成中") : generationBlocked ? t("请先配置 API") : t("生成初版")}
                 </span>
               </button>
               <input
@@ -193,7 +196,7 @@ const Hero1 = ({
                   if (event.key === "Enter") submit();
                 }}
                 disabled={isLoading}
-                placeholder="例如：第十三层档案馆，前刑警寻找失踪妹妹，进入不存在的楼层"
+                placeholder={t("例如：第十三层档案馆，前刑警寻找失踪妹妹，进入不存在的楼层")}
                 className="min-w-0 flex-1 bg-transparent pl-4 text-sm text-gray-200 outline-none placeholder:text-gray-500 sm:text-base"
               />
             </div>
@@ -214,7 +217,7 @@ const Hero1 = ({
                 >
                   <strong className="text-sm leading-5">{option.label}</strong>
                   <small className={selectedTextModel === option.value ? "text-black/55" : "text-white/45"}>
-                    {option.sub}
+                    {t(option.sub)}
                   </small>
                 </button>
               ))}
@@ -222,8 +225,8 @@ const Hero1 = ({
             {isLoading && (
               <div className="mt-5 rounded-2xl bg-white/8 p-4 ring-1 ring-white/10">
                 <div className="mx-auto mb-3 size-12 rounded-full border-4 border-white/10 border-t-fuchsia-400 border-r-violet-400 animate-spin" />
-                <p className="text-sm font-medium text-white/85">正在生成初版文本创作内容...</p>
-                <p className="mt-1 text-xs text-white/50">完成后会自动进入文本创作页。</p>
+                <p className="text-sm font-medium text-white/85">{t("正在生成初版文本创作内容...")}</p>
+                <p className="mt-1 text-xs text-white/50">{t("完成后会自动进入文本创作页。")}</p>
                 <div className="relative mx-auto mt-4 h-1.5 max-w-sm overflow-hidden rounded-full bg-white/15">
                   <div className="generation-progress-sweep" />
                 </div>
