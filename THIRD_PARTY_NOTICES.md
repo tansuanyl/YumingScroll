@@ -33,8 +33,8 @@ license merely by being used with the project:
 - Operator-provided payment QR images or URLs
 - Brand assets under `public/brand/`, which are covered by `TRADEMARKS.md`
 
-The SVG style thumbnails under `public/style-thumbnails/` and the built-in
-prompt framework are maintained as original project source under
+The JPG style thumbnails under `public/style-thumbnails/custom/` and the
+built-in prompt framework are maintained as original project assets under
 AGPL-3.0-only.
 
 User-provided and user-generated stories, prompts, images, audio, and videos

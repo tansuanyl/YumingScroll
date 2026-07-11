@@ -17,9 +17,9 @@ describe("text creation configuration", () => {
     expect(visualStylePresets.every((preset) => preset.label && preset.prompt && preset.accent)).toBe(true);
   });
 
-  it("uses the bundled SVG thumbnails for visual style cards", () => {
+  it("uses the original JPG thumbnails for visual style cards", () => {
     for (const preset of visualStylePresets) {
-      expect(preset.thumbnail).toBe(`/style-thumbnails/${preset.id}.svg`);
+      expect(preset.thumbnail).toBe(`/style-thumbnails/custom/${preset.id}.jpg`);
       expect(existsSync(join(process.cwd(), "public", preset.thumbnail.replace(/^\//, "")))).toBe(true);
     }
   });

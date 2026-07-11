@@ -20,7 +20,7 @@
 
 ### 文本创作工作台
 
-![文本创作工作台中的输入模式、模型选择与 12 种画面风格](./docs/screenshots/text-creation-workbench.png?v=2)
+![文本创作工作台中的输入模式、模型选择与 12 种原版画面风格](./docs/screenshots/text-creation-workbench.png?v=3)
 
 ### 视频 Flow Map
 
