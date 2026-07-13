@@ -1,6 +1,6 @@
 {
   "name": "ai-comic-workbench",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An AI-assisted comic drama creation workbench for story, storyboard, visual assets, Flow Map, and video generation.",
   "private": true,
   "license": "AGPL-3.0-only",
