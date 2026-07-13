@@ -1,3 +1,5 @@
+**简体中文** | [English](./README_EN.md)
+
 # 喻鸣绘卷 / Yuming Scroll
 
 [![CI](https://github.com/tansuanyl/YumingScroll/actions/workflows/ci.yml/badge.svg)](https://github.com/tansuanyl/YumingScroll/actions/workflows/ci.yml)
