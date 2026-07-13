@@ -200,6 +200,11 @@ docs/                部署、存储和提示框架文档
 - 安全问题请按 [SECURITY.md](./SECURITY.md) 私下报告
 - 参与贡献前请阅读 [CONTRIBUTING.md](./CONTRIBUTING.md) 和 [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
 
+## 分享与反馈
+
+- [项目发布素材包](./docs/launch-kit.md) 包含中英文平台文案、配图建议、发布检查表和两周传播节奏
+- 使用 [Issues](https://github.com/tansuanyl/YumingScroll/issues) 报告可复现问题，使用 [Discussions](https://github.com/tansuanyl/YumingScroll/discussions) 交流使用经验和工作流建议
+
 ## 许可证
 
 软件源代码采用 [GNU Affero General Public License v3.0 only](./LICENSE)。修改后通过网络提供服务时，需要向这些服务用户提供对应版本的源代码。

@@ -200,6 +200,11 @@ This version is designed for single-user self-hosting and has no built-in accoun
 - Report security issues privately according to [SECURITY.md](./SECURITY.md)
 - Read [CONTRIBUTING.md](./CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) before contributing
 
+## Share and Feedback
+
+- The [project launch kit](./docs/launch-kit.md) includes Chinese and English platform copy, asset guidance, a publishing checklist, and a two-week distribution sequence
+- Use [Issues](https://github.com/tansuanyl/YumingScroll/issues) for reproducible problems and [Discussions](https://github.com/tansuanyl/YumingScroll/discussions) for usage notes and workflow ideas
+
 ## License
 
 The source code is licensed under the [GNU Affero General Public License v3.0 only](./LICENSE). If you provide a modified version over a network, you must make the corresponding source code available to users of that service.
