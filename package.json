@@ -39,7 +39,7 @@
     "db:logs": "docker compose logs -f postgres"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1085.0",
+    "@aws-sdk/client-s3": "^3.1090.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",
@@ -61,23 +61,23 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "framer-motion": "^12.42.2",
-    "lucide-react": "^1.24.0",
+    "lucide-react": "^1.25.0",
     "mammoth": "^1.12.0",
     "next": "^16.2.10",
-    "openai": "^6.46.0",
+    "openai": "^6.48.0",
     "pg": "^8.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sharp": "^0.35.3",
-    "tsx": "^4.23.0",
+    "tsx": "^4.23.1",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.2",
-    "@tailwindcss/vite": "^4.3.2",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.1",
@@ -87,7 +87,7 @@
     "concurrently": "^10.0.3",
     "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3",
-    "vite": "^8.1.4",
+    "vite": "^8.1.5",
     "vitest": "^4.1.10"
   },
   "overrides": {
