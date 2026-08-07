@@ -12,6 +12,12 @@
 
 项目当前处于早期开发阶段。真实生成需要部署者自己的模型服务账号，并可能产生第三方 API 费用。
 
+## 22 秒实机演示
+
+[![点击观看喻鸣绘卷 Flow Map 22 秒实机演示](./docs/demo/flow-map-demo-poster.png)](./docs/demo/flow-map-demo.mp4)
+
+> 点击上图观看完整实机录屏。演示展示从分镜节点连接人物、场景和脚本，再进入视频片段工作流的过程。
+
 ## 实机画面
 
 > 以下截图使用 Mock 演示数据，不包含真实 API Key 或用户数据。
@@ -55,16 +61,38 @@
 
 ## 快速开始
 
-环境要求：Node.js 22+、npm 10+。
+### Docker Compose（推荐）
+
+环境要求：Docker Desktop，或带有 Docker Compose 插件的 Docker Engine。
 
 ```bash
 git clone https://github.com/tansuanyl/YumingScroll.git
 cd YumingScroll
+docker compose up --build
+```
+
+首次启动会自动创建 PostgreSQL 和媒体持久化卷，并在未提供 `.env` 时进入零密钥 Mock 模式。打开 `http://127.0.0.1:5173` 即可进入工作台；容器内 API 通过同域 `/api` 代理访问，不会单独暴露到宿主机。Mock 只用于检查界面和流程。
+
+要使用真实模型，请先创建 `.env`，关闭 Mock 并填写自己的服务端 Provider Key，然后重新启动：
+
+```bash
+cp .env.example .env
+# 编辑 .env 后执行
+docker compose up -d --build
+```
+
+停止服务使用 `docker compose down`。项目数据和本地媒体会保留在 Docker volumes 中；不要运行 `docker compose down -v`，除非你确定要删除这些数据。
+
+### Node.js 本地开发
+
+环境要求：Node.js 22+、npm 10+。在仓库目录中执行：
+
+```bash
 npm ci
 cp .env.example .env
 ```
 
-### 推荐：配置真实 Provider 后体验
+#### 推荐：配置真实 Provider 后体验
 
 要评估项目的实际生成效果，请先在 `.env` 中关闭 Mock，并至少配置一个文本 Provider；图片和视频生成还需要媒体 Provider：
 
@@ -97,7 +125,7 @@ npm run dev
 
 打开 Web 地址即可直接进入工作台，无需注册或登录。首页会检查文本与媒体 Provider 状态：所选文本模型未配置时会阻止生成；Mock 或媒体未配置时会明确提示。
 
-### 仅验证界面与流程：Mock 模式
+#### 仅验证界面与流程：Mock 模式
 
 没有 Provider 账号时，可以把 `.env` 调整为零密钥 Mock 模式：
 
