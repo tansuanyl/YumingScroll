@@ -12,6 +12,12 @@ Yuming Scroll is a self-hosted AI comic drama creation workbench that brings sto
 
 The project is in early development. Real generation requires your own model provider accounts and may incur third-party API charges.
 
+## 22-Second Demo
+
+[![Watch the 22-second Yuming Scroll Flow Map demo](./docs/demo/flow-map-demo-poster.png)](./docs/demo/flow-map-demo.mp4)
+
+> Click the image to watch the full screen recording. It shows a storyboard node being connected to character, scene, and script inputs before continuing into the video segment workflow.
+
 ## Screenshots
 
 > The screenshots below use mock demonstration data and contain no real API keys or user data.
@@ -55,16 +61,38 @@ The project is in early development. Real generation requires your own model pro
 
 ## Quick Start
 
-Requirements: Node.js 22+ and npm 10+.
+### Docker Compose (recommended)
+
+Requirements: Docker Desktop, or Docker Engine with the Docker Compose plugin.
 
 ```bash
 git clone https://github.com/tansuanyl/YumingScroll.git
 cd YumingScroll
+docker compose up --build
+```
+
+A fresh clone automatically creates persistent PostgreSQL and media volumes. If no `.env` is present, it starts in key-free Mock mode. Open `http://127.0.0.1:5173` to enter the workbench. The API stays inside the container and is reached through the same-origin `/api` proxy instead of a separate host port. Mock mode is only for checking the interface and workflow.
+
+To use real models, create `.env`, disable Mock, add your own server-side provider keys, and restart:
+
+```bash
+cp .env.example .env
+# Edit .env, then run:
+docker compose up -d --build
+```
+
+Use `docker compose down` to stop the services. Project data and local media remain in Docker volumes. Do not run `docker compose down -v` unless you intend to delete that data.
+
+### Local Node.js development
+
+Requirements: Node.js 22+ and npm 10+. From the repository directory, run:
+
+```bash
 npm ci
 cp .env.example .env
 ```
 
-### Recommended: configure real providers first
+#### Recommended: configure real providers first
 
 To evaluate actual generation quality, disable mock mode in `.env` and configure at least one text provider. Image and video generation also require a media provider:
 
@@ -97,7 +125,7 @@ npm run dev
 
 Open the Web URL to enter the workbench directly; no registration or login is required. The home page checks text and media provider status. Generation is blocked when the selected text model is unconfigured, while mock or missing media providers are clearly identified.
 
-### Interface and workflow only: mock mode
+#### Interface and workflow only: mock mode
 
 If you do not have provider accounts, enable key-free mock mode in `.env`:
 

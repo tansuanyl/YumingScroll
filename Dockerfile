@@ -44,4 +44,4 @@ COPY --from=builder /app/postcss.config.mjs ./postcss.config.mjs
 
 EXPOSE 5173 8787
 
-CMD ["npm", "run", "start:server"]
+CMD ["npm", "start"]

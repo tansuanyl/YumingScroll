@@ -1,14 +1,13 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: ai-comic-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ai_comic_workbench
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -17,5 +16,86 @@ services:
       timeout: 5s
       retries: 20
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        API_PROXY_TARGET: http://127.0.0.1:8787
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org/}
+    image: yumingscroll:local
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      APP_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8787
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://127.0.0.1:5173}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-}
+      API_PROXY_TARGET: http://127.0.0.1:8787
+      API_PROXY_TIMEOUT_MS: ${API_PROXY_TIMEOUT_MS:-480000}
+      API_PROXY_MAX_ATTEMPTS: ${API_PROXY_MAX_ATTEMPTS:-2}
+      API_PROXY_RETRY_DELAY_MS: ${API_PROXY_RETRY_DELAY_MS:-300}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/ai_comic_workbench
+
+      # A fresh clone starts in key-free Mock mode. Values in .env override these defaults.
+      MOCK_PROVIDERS: ${MOCK_PROVIDERS:-true}
+      OPENAI_MOCK: ${OPENAI_MOCK:-true}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_API_MODE: ${OPENAI_API_MODE:-responses}
+      MOONSHOT_API_KEY: ${MOONSHOT_API_KEY:-}
+      MOONSHOT_MODEL: ${MOONSHOT_MODEL:-kimi-k2.6}
+      MOONSHOT_BASE_URL: ${MOONSHOT_BASE_URL:-https://api.moonshot.cn/v1}
+      OPENAI_MAX_COMPLETION_TOKENS: ${OPENAI_MAX_COMPLETION_TOKENS:-32000}
+      OPENAI_TEXT_TIMEOUT_MS: ${OPENAI_TEXT_TIMEOUT_MS:-360000}
+      OPENAI_FALLBACK_TO_MOCK_ON_TIMEOUT: ${OPENAI_FALLBACK_TO_MOCK_ON_TIMEOUT:-true}
+
+      SEEDANCE_MOCK: ${SEEDANCE_MOCK:-true}
+      SEEDANCE_API_KEY: ${SEEDANCE_API_KEY:-}
+      SEEDANCE_PROVIDER: ${SEEDANCE_PROVIDER:-ark}
+      SEEDANCE_BASE_URL: ${SEEDANCE_BASE_URL:-https://ark.cn-beijing.volces.com/api/v3}
+      SEEDANCE_AUTH_SCHEME: ${SEEDANCE_AUTH_SCHEME:-Bearer}
+      SEEDANCE_IMAGE_MODEL: ${SEEDANCE_IMAGE_MODEL:-doubao-seedream-4-0-250828}
+      SEEDANCE_IMAGE_SIZE: ${SEEDANCE_IMAGE_SIZE:-1728x2304}
+      SEEDANCE_IMAGE_ENHANCE_MODE: ${SEEDANCE_IMAGE_ENHANCE_MODE:-standard}
+      SEEDANCE_VIDEO_MODEL: ${SEEDANCE_VIDEO_MODEL:-doubao-seedance-2-0-260128}
+      SEEDANCE_VIDEO_RESOLUTION: ${SEEDANCE_VIDEO_RESOLUTION:-720p}
+      SEEDANCE_GENERATE_AUDIO: ${SEEDANCE_GENERATE_AUDIO:-true}
+      SEEDANCE_HTTP_TIMEOUT_SEC: ${SEEDANCE_HTTP_TIMEOUT_SEC:-120}
+      SEEDANCE_VIDEO_SYNC_TIMEOUT_MS: ${SEEDANCE_VIDEO_SYNC_TIMEOUT_MS:-180000}
+      SEEDANCE_VIDEO_POLL_INTERVAL_MS: ${SEEDANCE_VIDEO_POLL_INTERVAL_MS:-5000}
+
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-}
+      STORAGE_REGION: ${STORAGE_REGION:-}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-}
+      STORAGE_PREFIX: ${STORAGE_PREFIX:-media}
+      STORAGE_FORCE_PATH_STYLE: ${STORAGE_FORCE_PATH_STYLE:-false}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-}
+      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:-}
+    command: sh -c "npm run db:deploy && npm start"
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5173}:5173"
+    volumes:
+      - media-data:/app/server/storage/media
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8787/api/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
 volumes:
   postgres-data:
+  media-data:

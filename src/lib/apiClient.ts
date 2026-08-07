@@ -45,6 +45,7 @@ function resolveApiBaseUrl(): string {
 
   if (
     typeof window !== "undefined" &&
+    process.env.NODE_ENV !== "production" &&
     (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") &&
     window.location.port === "5173"
   ) {

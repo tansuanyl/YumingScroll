@@ -15,6 +15,7 @@ answer technical questions after posting.
 - Issues: <https://github.com/tansuanyl/YumingScroll/issues>
 - Discussions: <https://github.com/tansuanyl/YumingScroll/discussions>
 - Social preview: [social-preview.png](./social-preview.png)
+- 22-second Flow Map demo: [flow-map-demo.mp4](./demo/flow-map-demo.mp4)
 - Text workbench: [text-creation-workbench.png](./screenshots/text-creation-workbench.png)
 - Flow Map: [video-flow-map.png](./screenshots/video-flow-map.png)
 - Storyboard detail: [storyboard-script-detail.png](./screenshots/storyboard-script-detail.png)
@@ -46,12 +47,14 @@ Avoid claims such as "production ready", "free AI generation", "fully local",
 
 ## Asset order
 
-Use one strong visual per post instead of attaching every screenshot.
+Use one strong visual per post instead of attaching every screenshot. Prefer the
+short demo when the platform supports video.
 
-1. `docs/social-preview.png`: repository links and general launch posts.
-2. `docs/screenshots/video-flow-map.png`: the clearest product differentiator.
-3. `docs/screenshots/text-creation-workbench.png`: text workflow and the 12 original visual styles.
-4. `docs/screenshots/storyboard-script-detail.png`: detailed storyboard, dialogue, sound, and lighting controls.
+1. `docs/demo/flow-map-demo.mp4`: the complete product interaction in 22 seconds.
+2. `docs/social-preview.png`: repository links and general launch posts.
+3. `docs/screenshots/video-flow-map.png`: the clearest static product differentiator.
+4. `docs/screenshots/text-creation-workbench.png`: text workflow and the 12 original visual styles.
+5. `docs/screenshots/storyboard-script-detail.png`: detailed storyboard, dialogue, sound, and lighting controls.
 
 Suggested alt text:
 
@@ -167,12 +170,26 @@ Use the following as a source draft, then rewrite the opening paragraph in your
 own voice. Read the target community's current rules and disclose that you are
 the author. Do not post identical copy to several subreddits.
 
-`r/selfhosted` currently expects promoted applications to be production-ready
-and documented. Because Yuming Scroll is explicitly early-stage, wait until the
-installation path and provider setup have been validated by several external
-users before posting there. For an earlier feedback post, choose a maker or open
-source community that explicitly permits project showcases and where your
-account already participates.
+For `r/selfhosted`, use the current weekly New Project Megathread instead of a
+standalone promotional post. The repository now has a one-command Docker
+Compose path, persistent volumes, provider documentation, and a key-free Mock
+mode. Keep the early-stage caveat and AI-development disclosure visible.
+
+### r/selfhosted New Project Megathread comment
+
+```text
+Project Name: Yuming Scroll
+
+Repository: https://github.com/tansuanyl/YumingScroll
+
+Description: I am the author of Yuming Scroll, an early-stage self-hosted workbench for long-form AI comic-to-video projects. I built it because this workflow quickly becomes more than a prompt box: characters and locations need reusable references, storyboard details need to stay editable, and each short video segment needs context from adjacent segments. The app keeps stories, characters, scenes, storyboard scripts, a visual Flow Map, images, and video assets in one project. It has Chinese and English interfaces, no accounts, and no built-in billing.
+
+Deployment: It is released under AGPL-3.0-only and runs with `docker compose up --build`. The default local setup starts the web app, API, PostgreSQL, and persistent media storage, bound to 127.0.0.1. A fresh clone uses explicit Mock providers so the interface can be inspected without keys. Real generation requires the deployer's own OpenAI, Moonshot/Kimi, Seedance/Ark, fal, or compatible provider credentials in server-side environment variables. The README documents Docker, Node.js, provider configuration, storage, and the lack of built-in access control. Add authentication and HTTPS at a reverse proxy before exposing it publicly.
+
+AI involvement: I used AI coding assistance during development and documentation. I reviewed the changes and validate releases with type checking, tests, a production build, and a browser-bundle secret scan. The application itself calls third-party AI providers only when the deployer explicitly configures them.
+
+I would especially value concrete feedback on whether the Docker setup reaches the workbench cleanly and whether the Flow Map connection model is understandable without explanation.
+```
 
 ### Title
 
@@ -216,10 +233,10 @@ https://github.com/tansuanyl/YumingScroll/issues
 
 ## Hacker News readiness
 
-Do not submit the project as a Show HN yet. Show HN asks for something people
-can try easily, while the current project requires a local setup and external
-provider configuration. Reconsider after adding a reliable containerized quick
-start or a safe public demo.
+Do not submit the project as a Show HN yet. The containerized quick start is now
+available, but Show HN works best when readers can try the core result without
+provider setup. Reconsider after adding a safe, no-signup public demo or a
+convincing key-free interactive sample.
 
 When it is ready, write the submission and comments personally rather than
 copying generated launch prose. The current HN guidelines explicitly disallow
